@@ -1,4 +1,4 @@
-# Bouwstatus — versie 0.5
+# Bouwstatus — versie 0.6
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -34,6 +34,11 @@
 - Teleportregels zijn pure code (src/teleport.ts) met 7 tests: vloerstraal, wandmarge, geroteerde footprints, verborgen/hangende objecten, hoofdoffset, stick-hysterese, startpunt.
 - De renderloop gebruikt nu `setAnimationLoop`; desktop-rendering is in de browser opnieuw bekeken. Sessiestart en controllers zijn **niet** op hardware bewezen; de VR-knop is uitgeschakeld zonder headset.
 
+## Toegevoegd in versie 0.6 (browser-UX-lus)
+
+- Playwright-suite (`npm run test:e2e`, systeem-Chrome, 6 tests): presets, selectiekader-richtingen, groep/uniek/lock, handmatig bewerken + herstel, hoekcanvas, exports. Zie docs/E2E.md.
+- Alleen-lezen `window.__studio`-hook onder `?e2e=1`; `measureBoxes` in de viewport wordt gedeeld door selectiekader en tests.
+
 ## Bewijs
 
 81 tests slagen, inclusief client → echte HTTP → fake Claude → preview → revisie, CLI-start/herstart, proceslock, budgetconcurrency, hiërarchie, uitlijning, meten en echte GLB-roundtrips. TypeScript/productie-build, formatter, diff-whitespacecontrole slagen. Productieaudit meldt 0 kwetsbaarheden. Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen WebGL/UI/Safari-acceptatie geclaimd. Zie TEST_RESULTS.
@@ -56,7 +61,7 @@ Editor: http://localhost:4173. API: 8787. Productie: `npm run build` en `npm sta
 
 ## Vervolg naar volledige specificatie
 
-1. Volledige browseracceptatie van docs/MANUAL_QA.md en geobserveerde fouten herstellen.
+1. Resterende MANUAL_QA-punten buiten de e2e-dekking, plus visuele regressie met referentiebeelden.
 2. Catalogusadapters, gedeelde assembly-definities, socket-editor en magnetische sleep-snapping.
 3. Echte headset-/emulatorcontrole van VR; media-export in projectpakket; schermafbeelding-/regressielus.
 4. Blender-renderqueue, GLB-import/assetpackage en exportverfijning.

@@ -9,13 +9,14 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "check": "tsc -b",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "format": "prettier --write src server scripts tests vite.config.ts",
-    "format:check": "prettier --check src server scripts tests vite.config.ts",
+    "format": "prettier --write src server scripts tests e2e vite.config.ts playwright.config.mjs",
+    "format:check": "prettier --check src server scripts tests e2e vite.config.ts playwright.config.mjs",
     "dev:env": "node --env-file=.env scripts/dev.mjs",
     "dev:web": "vite --host 127.0.0.1 --port 4173",
     "server": "node --experimental-strip-types server/index.ts",
     "start": "node --experimental-strip-types server/index.ts",
-    "start:env": "node --env-file=.env --experimental-strip-types server/index.ts"
+    "start:env": "node --env-file=.env --experimental-strip-types server/index.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
@@ -26,6 +27,7 @@
     "three": "^0.186.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.19.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

@@ -299,6 +299,20 @@ function App() {
     [exportBusy, setExportBusy] = useState(false);
   const [mediaRuntime] = useState(() => new MediaRuntime());
   const [mediaVersion, setMediaVersion] = useState(0);
+  useEffect(() => {
+    // Read-only hook for the Playwright suite (opt-in via ?e2e=1).
+    if (!new URLSearchParams(location.search).has("e2e")) return;
+    (window as any).__studio = {
+      project: () => JSON.parse(JSON.stringify(pRef.current)),
+      boxes: () => api.current?.screenBoxes() ?? [],
+      selected: () => [...selectedRef.current],
+    };
+    return () => {
+      delete (window as any).__studio;
+    };
+  }, []);
+  const selectedRef = useRef<string[]>([]);
+  selectedRef.current = selected;
   const [vrState, setVrState] = useState<VrState>("unsupported");
   useEffect(
     () => mediaRuntime.subscribe(() => setMediaVersion(mediaRuntime.version)),

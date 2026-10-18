@@ -10,3 +10,6 @@ studio-data/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+e2e-results/
+playwright-report/
+test-results/

@@ -29,6 +29,8 @@ import type { Project, Vec3, View, Preset, CameraBookmark } from "./model";
 export type Tool = "select" | "move" | "rotate" | "measure";
 export type VrState = "unsupported" | "ready" | "active";
 export interface ViewportApi {
+  /** Read-only: unit boxes in client pixels, for browser tests. */
+  screenBoxes: () => ScreenBounds[];
   enterVr: () => Promise<string | void>;
   exitVr: () => void;
   fit: () => void;
@@ -258,6 +260,16 @@ export default function Viewport(props: Props) {
       controls.update();
     };
     const api: ViewportApi = {
+      screenBoxes: () => {
+        const r = el.getBoundingClientRect();
+        return measureBoxes().boxes.map((b) => ({
+          ...b,
+          left: b.left + r.left,
+          right: b.right + r.left,
+          top: b.top + r.top,
+          bottom: b.bottom + r.top,
+        }));
+      },
       enterVr: async () => {
         const xr = (navigator as any).xr;
         if (!xr) return "WebXR is niet beschikbaar in deze browser.";
@@ -363,6 +375,43 @@ export default function Viewport(props: Props) {
       rectangle.style.height = `${Math.abs(dy)}px`;
       rectangle.classList.toggle("crossing", dx < 0);
     };
+    /** Screen-space boxes of every selectable unit, relative to the viewport element. */
+    const measureBoxes = () => {
+      const r = el.getBoundingClientRect(),
+        screenBoxes: ScreenBounds[] = [];
+      const units = selectionUnits(
+        latest.current.project,
+        latest.current.contextId,
+      );
+      units.forEach((unit) => {
+        const b = new THREE.Box3();
+        for (const id of unit.objectIds) {
+          const g = objects.get(id);
+          if (g) b.expandByObject(g);
+        }
+        if (b.isEmpty()) return;
+        const pts = [];
+        for (const x of [b.min.x, b.max.x])
+          for (const y of [b.min.y, b.max.y])
+            for (const z of [b.min.z, b.max.z]) {
+              const q = new THREE.Vector3(x, y, z).project(camera);
+              pts.push({
+                x: ((q.x + 1) * r.width) / 2,
+                y: ((1 - q.y) * r.height) / 2,
+                z: q.z,
+              });
+            }
+        screenBoxes.push({
+          id: unit.id,
+          left: Math.min(...pts.map((q) => q.x)),
+          right: Math.max(...pts.map((q) => q.x)),
+          top: Math.min(...pts.map((q) => q.y)),
+          bottom: Math.max(...pts.map((q) => q.y)),
+          clipped: pts.every((q) => q.z > 1 || q.z < -1),
+        });
+      });
+      return { units, boxes: screenBoxes };
+    };
     const pointerUp = (e: PointerEvent) => {
       rectangle.style.display = "none";
       if (!down) return;
@@ -373,44 +422,7 @@ export default function Viewport(props: Props) {
         dx = e.clientX - from.x,
         dy = e.clientY - from.y;
       if (Math.hypot(dx, dy) > 8 && latest.current.tool === "select") {
-        const screenBoxes: ScreenBounds[] = [];
-        const units = selectionUnits(
-          latest.current.project,
-          latest.current.contextId,
-        );
-        units.forEach((unit) => {
-          const b = new THREE.Box3();
-          for (const id of unit.objectIds) {
-            const g = objects.get(id);
-            if (g) b.expandByObject(g);
-          }
-          if (b.isEmpty()) return;
-          const id = unit.id;
-          const pts = [];
-          for (const x of [b.min.x, b.max.x])
-            for (const y of [b.min.y, b.max.y])
-              for (const z of [b.min.z, b.max.z]) {
-                const q = new THREE.Vector3(x, y, z).project(camera);
-                pts.push({
-                  x: ((q.x + 1) * r.width) / 2,
-                  y: ((1 - q.y) * r.height) / 2,
-                  z: q.z,
-                });
-              }
-          const clipped = pts.every((q) => q.z > 1 || q.z < -1);
-          const l = Math.min(...pts.map((q) => q.x)),
-            rr = Math.max(...pts.map((q) => q.x)),
-            t = Math.min(...pts.map((q) => q.y)),
-            bb = Math.max(...pts.map((q) => q.y));
-          screenBoxes.push({
-            id,
-            left: l,
-            right: rr,
-            top: t,
-            bottom: bb,
-            clipped,
-          });
-        });
+        const { units, boxes: screenBoxes } = measureBoxes();
         const ids = rectangleSelection(
           screenBoxes,
           { x: from.x - r.left, y: from.y - r.top },

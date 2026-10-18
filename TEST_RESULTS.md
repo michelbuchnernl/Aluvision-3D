@@ -81,3 +81,10 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - tests/teleport.test.mjs: 7 hardwarevrije tests (zie docs/VR.md).
 - Browser: renderloop na de overstap naar `setAnimationLoop` getoond, geen consolefouten; VR-knop uitgeschakeld zonder headset (`navigator.xr` aanwezig, `immersive-vr` niet ondersteund).
 - Niet geverifieerd: daadwerkelijke XR-sessie, controllerinput, schaalrig, Safari/Vision Pro.
+
+## Versie 0.6 — Playwright (18 oktober 2026)
+
+- `npm run test:e2e`: 6 van 6 geslaagd in ~52 s (systeem-Chrome, headless/SwiftShader). Eerste run had 3 mislukkingen door testfouten (verkeerde knoplabels, dubbelzinnige selector, 404 van de afwezige API als consolefout); aangepast, niet de app.
+- Mutatiecontrole: selectierichting tijdelijk omgedraaid → selectiekadertest faalde; teruggezet.
+- `npm test` (Node-tests) en `check`/`build`: zie hieronder bij de laatste run.
+- Niet gedekt: zie docs/E2E.md.

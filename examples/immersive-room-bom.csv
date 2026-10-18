@@ -1,0 +1,6 @@
+﻿"Code";"Omschrijving";"Type";"Aantal";"Lengte cm";"Hoogte cm";"Diepte cm";"Materiaal";"Groep";"Status"
+"DEMO-F100";"Frame 100 × 250";"frame";"16";"100";"250";"5";"Aluminium";"—";"Synthetische demo"
+"DEMO-P100";"Projectiepaneel 100 × 250";"panel";"16";"100";"250";"4";"Projectiedoek";"—";"Synthetische demo"
+"DEMO-D100";"Open doorgang 100 × 250";"door";"2";"100";"250";"8";"Zwart";"—";"Synthetische demo"
+"DEMO-TABLE";"Tafel 140 × 80";"table";"1";"140";"75";"80";"Eiken";"—";"Synthetische demo"
+"DEMO-PROJ";"Projector proxy 40";"projector";"1";"40";"18";"30";"Wit";"—";"Synthetische demo"

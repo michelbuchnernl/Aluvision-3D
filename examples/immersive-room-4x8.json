@@ -1,0 +1,633 @@
+{
+  "schemaVersion": 1,
+  "id": "58504ca2-2829-445f-8e55-92fed253461a",
+  "name": "Immersive room · 4 × 8 m",
+  "units": "cm",
+  "room": {
+    "length": 800,
+    "depth": 400,
+    "height": 300
+  },
+  "definitions": [
+    {
+      "id": "frame-100",
+      "name": "Frame 100 × 250",
+      "kind": "frame",
+      "size": {
+        "x": 100,
+        "y": 250,
+        "z": 5
+      },
+      "material": "aluminium",
+      "source": "synthetic",
+      "catalogId": "DEMO-F100"
+    },
+    {
+      "id": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "kind": "panel",
+      "size": {
+        "x": 100,
+        "y": 250,
+        "z": 4
+      },
+      "material": "fabric",
+      "source": "synthetic",
+      "catalogId": "DEMO-P100"
+    },
+    {
+      "id": "truss-200",
+      "name": "Truss 200",
+      "kind": "truss",
+      "size": {
+        "x": 200,
+        "y": 25,
+        "z": 25
+      },
+      "material": "aluminium",
+      "source": "synthetic",
+      "catalogId": "DEMO-T200"
+    },
+    {
+      "id": "connector-25",
+      "name": "Verbindingsblok 25",
+      "kind": "connector",
+      "size": {
+        "x": 25,
+        "y": 25,
+        "z": 25
+      },
+      "material": "aluminium",
+      "source": "synthetic",
+      "catalogId": "DEMO-C25"
+    },
+    {
+      "id": "door-100",
+      "name": "Open doorgang 100 × 250",
+      "kind": "door",
+      "size": {
+        "x": 100,
+        "y": 250,
+        "z": 8
+      },
+      "material": "black",
+      "source": "synthetic",
+      "catalogId": "DEMO-D100"
+    },
+    {
+      "id": "table-140",
+      "name": "Tafel 140 × 80",
+      "kind": "table",
+      "size": {
+        "x": 140,
+        "y": 75,
+        "z": 80
+      },
+      "material": "wood",
+      "source": "synthetic",
+      "catalogId": "DEMO-TABLE"
+    },
+    {
+      "id": "projector-40",
+      "name": "Projector proxy 40",
+      "kind": "projector",
+      "size": {
+        "x": 40,
+        "y": 18,
+        "z": 30
+      },
+      "material": "white",
+      "source": "synthetic",
+      "catalogId": "DEMO-PROJ"
+    }
+  ],
+  "objects": [
+    {
+      "id": "5494a84a-e0a0-4c1e-b204-f3f2e338835e",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": -350,
+        "y": 0,
+        "z": -195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "19c8502f-867e-404b-8903-3214e08c9f76",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": -350,
+        "y": 0,
+        "z": -192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "51bacfc2-9b76-48d2-945f-7beef5ee9a46",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": -250,
+        "y": 0,
+        "z": -195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "5ebab304-3ca4-4a6e-8596-9ef84315783e",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": -250,
+        "y": 0,
+        "z": -192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "772f2cd6-3335-494e-8af4-b2098395aa96",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": -150,
+        "y": 0,
+        "z": -195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "67cbd554-18a7-4746-9c63-c94477f89f9e",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": -150,
+        "y": 0,
+        "z": -192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "4fe8f1a0-5d21-4b4e-a3ca-b5bcd73be595",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": -50,
+        "y": 0,
+        "z": -195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "0535349e-73ec-4e72-9d53-26e8bc818fe9",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": -50,
+        "y": 0,
+        "z": -192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "86e0843f-5bc0-413c-b94e-4a73d4040454",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": 50,
+        "y": 0,
+        "z": -195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "36c89954-1b81-4fd7-bee0-7fbe665a9c74",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": 50,
+        "y": 0,
+        "z": -192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "05344ec7-c1cb-47e6-ba0d-f39956b98080",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": 150,
+        "y": 0,
+        "z": -195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "8c101432-c12a-4589-a50a-02bf533be4d0",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": 150,
+        "y": 0,
+        "z": -192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "80873b42-6346-4dc4-ac9a-a1daba69e49e",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": 250,
+        "y": 0,
+        "z": -195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "c50b6e6c-33c3-4dd8-8281-64257dc62d94",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": 250,
+        "y": 0,
+        "z": -192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "56517b8c-5d57-4dfc-9bc2-9e6712dbe2a6",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": 350,
+        "y": 0,
+        "z": -195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "0568ffb6-cebe-4b38-988b-49adea993dbe",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": 350,
+        "y": 0,
+        "z": -192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "5f97e720-bb2f-4391-aa39-123aad8fd2c4",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": -350,
+        "y": 0,
+        "z": 195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "5ef7d63b-a219-4d2c-b1de-653eeacd7109",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": -350,
+        "y": 0,
+        "z": 192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "e3f06ae2-6519-4618-9f0b-656b32528aac",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": -250,
+        "y": 0,
+        "z": 195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "47040188-9226-4d3f-9484-35884b76c5ac",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": -250,
+        "y": 0,
+        "z": 192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "13636062-9f7c-4b39-9aa9-a969fdab2be8",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": -150,
+        "y": 0,
+        "z": 195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "2065623d-778b-45dc-9988-39a3a0739e37",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": -150,
+        "y": 0,
+        "z": 192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "5cd1e48a-6b31-4456-8973-98830f8d3c2e",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": -50,
+        "y": 0,
+        "z": 195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "2c2d135a-77f4-407d-9ee7-c2e73b59f290",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": -50,
+        "y": 0,
+        "z": 192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "bc3ea86b-9eff-4e48-ac5e-96724a5731ea",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": 50,
+        "y": 0,
+        "z": 195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "62c80a0d-1538-49e5-9e5e-c9395a87f7ad",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": 50,
+        "y": 0,
+        "z": 192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "0f64a9f8-6955-42d1-8e7c-bbe7433ef21f",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": 150,
+        "y": 0,
+        "z": 195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "10784cf6-89df-4d8e-9a1d-4d8d28d7b9eb",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": 150,
+        "y": 0,
+        "z": 192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "f2c95ec0-fbdb-4f20-ab22-45ad967f43d7",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": 250,
+        "y": 0,
+        "z": 195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "c942a459-d2e6-4187-b9c0-91ca15e991dd",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": 250,
+        "y": 0,
+        "z": 192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "88c0c0ec-1706-4dc5-ba15-d8cf4e994e77",
+      "definitionId": "frame-100",
+      "name": "Frame 100 × 250",
+      "position": {
+        "x": 350,
+        "y": 0,
+        "z": 195
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "8ee4e47f-3c57-41ff-84c1-1cdfc5458476",
+      "definitionId": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "position": {
+        "x": 350,
+        "y": 0,
+        "z": 192
+      },
+      "rotation": 0,
+      "tag": "surfaces",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "247ec3e6-4e3c-4b2b-9109-668b822fa96c",
+      "definitionId": "door-100",
+      "name": "Open doorgang 100 × 250",
+      "position": {
+        "x": -395,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": 90,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "ecb49a7c-8003-452a-91b6-9354e16ef8a3",
+      "definitionId": "door-100",
+      "name": "Open doorgang 100 × 250",
+      "position": {
+        "x": 395,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": 90,
+      "tag": "frames",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "b1a9a439-1976-4266-abb3-2d592aed8c14",
+      "definitionId": "table-140",
+      "name": "Tafel 140 × 80",
+      "position": {
+        "x": -180,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": 0,
+      "tag": "furniture",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "67d3c4ea-f909-4d02-bac5-155ece9062f6",
+      "definitionId": "projector-40",
+      "name": "Projector op tafel",
+      "position": {
+        "x": -180,
+        "y": 75,
+        "z": 0
+      },
+      "rotation": 0,
+      "tag": "furniture",
+      "visible": true,
+      "locked": false
+    }
+  ],
+  "tags": [
+    {
+      "id": "frames",
+      "name": "Constructie",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "surfaces",
+      "name": "Projectievlakken",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "furniture",
+      "name": "Inrichting",
+      "visible": true,
+      "locked": false
+    }
+  ],
+  "groups": [],
+  "cameras": [],
+  "updatedAt": "2026-10-18T14:31:24.768Z"
+}

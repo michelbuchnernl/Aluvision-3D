@@ -18,4 +18,14 @@ Deze lijst is een testprocedure, geen verslag van geslaagde browserchecks.
 14. Exporteer PDF. Controleer drie aanzichten, maatlijnen, actuele revisie en browserbeeld. Print op 100% als je de schaalaanduiding gebruikt. Een 800 cm maat op schaal 1:50 meet 160 mm.
 15. Controleer smalle schermbreedte, touchbesturing, panelen en exportmenu. Test op een fysieke iPhone/Safari. Dit kan niet worden vervangen door alleen een responsieve CSS-inspectie.
 
-Noteer apparaat, browser, testdatum en werkelijk resultaat in TEST_RESULTS.md. Herstel geobserveerde defecten vóór uitbreiding met AI of Blender.
+Noteer apparaat, browser, testdatum en werkelijk resultaat in TEST_RESULTS.md. Herstel geobserveerde defecten voordat deze workflows als browsergevalideerd worden beschouwd.
+
+## Aanvulling versie 0.2 — nog uitvoeren
+
+16. Maak twee geneste groepen. Klik op rootniveau: selecteert de buitengroep. Dubbelklik: betreed die groep; dubbelklik nogmaals: betreed subgroep. Controleer breadcrumb, Escape en contextfading. Groepeer/ungroup één niveau zonder de andere structuur te verliezen. Test ook een groep met één overgebleven kind.
+17. Verberg een kind, selecteer de gesloten groep en verplaats/roteer die. Maak het kind zichtbaar: de relatieve positie moet behouden zijn. Dupliceer de groep: nieuwe groeps-IDs, gedeelde onderdeeldefinities. Test selectiemateriaal en een locked kind: geen gedeeltelijke transform/delete/unique/ungroup.
+18. Vergrendel een parent group. Kinderen zijn niet bewerkbaar; toevoegen binnen die context is uitgeschakeld. Ontgrendel de parent in de boom. Controleer zichtbaarheid en BOM die ook verborgen exemplaren telt.
+19. Open Server, bewaar project, wijzig meerdere malen snel en herlaad. Controleer revision status. Open een tweede tab, neem expliciet over en bevestig dat de eerste tab niet meer kan schrijven. Bewaar een lokale herstelkopie bij conflict.
+20. Stop/start de server, verbind opnieuw en open opgeslagen project en revisiehistorie. Herstellen maakt een nieuwe revisie. Test offline status zonder dat onopgeslagen werk verdwijnt.
+21. Claude zonder key: duidelijke setupstatus, geen inference mogelijk. API-key mag niet in browserstorage, downloads of frontendnetwerkrequests verschijnen.
+22. Alleen bij afzonderlijk geautoriseerde echte provideracceptatie: zet klein budget, vraag raming, voer bewust één aanvraag uit, bekijk preview, verwerp en pas daarna een ander geldig voorstel toe. Test extra akkoord voor ruimtewijziging en afwijzing van stale basis. Leg echte model-ID, usage en kosten vast; fake-provider-tests zijn hiervoor geen vervanging.

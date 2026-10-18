@@ -1,23 +1,20 @@
-# Huidige bouwstatus — actief checkpoint
+# Bouwstatus — versie 0.2
 
-Laatste actieve ronde gestart: 2026-10-18 15:12 UTC. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen.
+18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; deze afronding bevat groepscorrecties, formattering en actuele overdracht.
 
-## Nieuwe code sinds versie 0.1
+## Gebouwd
 
-- Node 24/SQLite-server met projecten, onveranderlijke revisies, herstellen als nieuwe revisie, per-tab bewerkingsleases en revisieconflicten.
-- Afgeschermde lokale HTTP-API met sessie/CSRF, origin/hostcontrole en optionele toegangscode voor private netwerkconfiguratie.
-- Seriële editor-opslagqueue, conflict/herstelstatus en serverprojecten-/revisiepaneel.
-- Server-side Claude-adapter met actuele modellijstcontrole, tokenraming, gesnapshotte officiële prijzen, atomair projectbudget en expliciet beoordeelde scènevoorstellen.
-- Geen echte provider-calls uitgevoerd: Claude-antwoorden zijn in tests nagebootst; er is geen API-geld besteed.
-- Voorstellen worden deterministisch gevalideerd, kunnen apart in de scène worden bekeken en vragen bij ruimtewijzigingen expliciete goedkeuring. Verouderde voorstellen overschrijven geen nieuwe wijzigingen.
-- Project-LOG en CONTEXT worden uit SQLite afgeleid; onbekend providerverbruik houdt de reservering vast tot expliciete reconciliatie.
-- Geneste groepen, hiërarchische locks/zichtbaarheid, bewerkingscontext en een objectboom worden nu toegevoegd en gecontroleerd. Shared component definitions blijven afzonderlijk van instances; gedeelde geneste assembly-definities zijn nog toekomstwerk.
+- Bestaande React/TypeScript/Three.js-editor, synthetische cm-demo, PDF/XLSX/JSON, lokale autosave en herstelpunten.
+- Node 24/native SQLite: projecten, onveranderlijke revisies, restore, per-tab leases/CAS-conflicten en seriële editor-opslagqueue.
+- Lokale HTTP-API met sessie/CSRF, Origin-/Hostcontrole en optionele toegangscode. Eén serverproces per datamap.
+- Server-side Claude-adapter: accountmodelcontrole, compacte scène/voorgaande vragen, tokenraming, gedateerde officiële prijzen, budget/reserveringen/ledger, proposal-preview en expliciet apply/reject/reconcile.
+- Geen echte provider-calls/kosten; tests gebruiken uitsluitend fake providerresponses. Sleutels en datamap zijn Git-ignored.
+- Automatisch afgeleide project-LOG/CONTEXT uit SQLite. Geen algemene kennisdistillatie.
+- Geneste groepen, context/breadcrumbs, objectboom, inherited locks/zichtbaarheid, hiërarchisch duplicate/ungroup, selectiemateriaal. Groepen zijn nog geen gedeelde assembly-definities.
 
-## Bewijs tot dit checkpoint
+## Bewijs
 
-De bestaande 60 tests slaagden, inclusief het volledige traject editorclient → echte HTTP-server → nagebootste Claude → voorstel → revisie. De afzonderlijke CLI-start/herstarttest slaagde en controleert ook een tweede serverproces op dezelfde datamap. Nieuwe hiërarchietests worden in deze ronde toegevoegd. TypeScript-controle en builds draaien tijdens de bouw.
-
-Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen visuele of iPhone/Safari-acceptatie geclaimd.
+68 tests slagen, inclusief client → echte HTTP → fake Claude → preview → revisie, CLI-start/herstart, proceslock, budgetconcurrency en hiërarchie. TypeScript/productie-build, formatter, diff-whitespacecontrole slagen. Productieaudit meldt 0 kwetsbaarheden. Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen WebGL/UI/Safari-acceptatie geclaimd. Zie TEST_RESULTS.
 
 ## Bestemming en hervatten
 
@@ -33,13 +30,14 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` start voortaan de lokale API op 8787 en de Vite-editor op 4173. Claude staat standaard uit. `.env.example` bevat de optionele configuratie; sleutels/data worden door Git genegeerd.
+Editor: http://localhost:4173. API: 8787. Productie: `npm run build` en `npm start`, daarna http://localhost:8787. Claude staat uit. Optionele `.env` vereist `npm run dev:env` of `npm run start:env`. Zie docs/SERVER_AND_AI.md voor gebruik en consistente back-up bij gestopte server.
 
-## Volgende acties
+## Vervolg naar volledige specificatie
 
-1. Rond de hiërarchie-/interactie-integratie en gerichte tests af.
-2. Werk README, REQUIREMENTS, DECISIONS en TEST_RESULTS bij naar het feitelijke resultaat van deze ronde.
-3. Push opnieuw bij het volgende coherente checkpoint en vóór beëindiging van de uitvoerronde.
-4. Browseracceptatie blijft een expliciete open taak; daarna volgen media/UV/WebXR/Blender en catalogusadapters.
+1. Echte browseracceptatie van docs/MANUAL_QA.md en geobserveerde fouten herstellen.
+2. Connection metadata/snapping, meetgereedschap, catalogusadapters en gedeelde assembly-definities.
+3. Media-intake, UV/corner canvas, video en read-only WebXR.
+4. Blender-renderqueue, GLB/assetpackage en exportverfijning.
+5. Modelroutering/kennisdistillatie en volledige referentieacceptatie.
 
-Er is tijdens het afronden van dit checkpoint een actieve bouwtaak in dit gesprek. Dit bestand belooft geen zelfstandig achtergrondproces nadat de beurt is beëindigd.
+Een geslaagde API-/buildtest is geen browseracceptatie. Dit bestand belooft geen zelfstandig achtergrondproces nadat de beurt is beëindigd. Bij hervatten: inspecteer de echte branch/status en de actuele documenten voordat je verder bouwt.

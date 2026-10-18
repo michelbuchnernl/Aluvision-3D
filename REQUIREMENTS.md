@@ -4,18 +4,18 @@ Status **gebouwd** betekent dat de functie in de code bestaat. Waar browserbedie
 
 | Oorspronkelijk onderdeel | Huidige invulling | Status / vervolg |
 | --- | --- | --- |
-| 1. Productvisie | Browsereditor, 4 × 8 m referentie, cm-scène, export | Handmatige eerste versie. Conversational design, intake en catalogusassemblage ontbreken. |
-| 2. Principes | Deterministische geometrie, gescheiden modellen, synthetische onderdelen, handmatig zonder sleutel | Gebouwd. Geen echte leveranciersdata of constructieve claims. Server-lock/backend/API nog niet gebouwd. |
-| 3. Architectuur | React, TypeScript, Vite, Three.js; schema en objectreferenties; lokale opslag | Gebouwd. FastAPI/SQLite, assetopslag, queue, Blender, GLB-uitwisseling en Docker ontbreken. |
-| 4. Ontwerpstadia | Ruimte, onderdelen plaatsen, verfijnen, views en exports | Gedeeltelijk. Geen beeldintake, AI-concepten, automatische catalogusmatching of AI-approval gates. |
-| 5. Ergonomie | Muis/touch controls; orthografische views; selectiekader; transforms; numeric cm; dupliceren; undo; shared/unique; flat groups; tags; locks; materials; bounds | Gebouwd, browseracceptatie open. Geen double-click nested editing/breadcrumbs, face materials, measure tool, connection snapping, doorlopend context-editing of planmatige padnavigatie. |
+| 1. Productvisie | Browsereditor, 4 × 8 m referentie, cm-scène, export | Handmatige editor en optionele conversationele scènevoorstellen. Beeldintake en automatische catalogusassemblage ontbreken. |
+| 2. Principes | Deterministische geometrie, gescheiden modellen, synthetische onderdelen, handmatig zonder sleutel | Gebouwd. Geen echte leveranciersdata of constructieve claims. SQLite-backend en per-tab serverlock gebouwd; browseracceptatie open. |
+| 3. Architectuur | React, TypeScript, Vite, Three.js; schema en objectreferenties; lokale opslag | Gebouwd. Node 24/native SQLite toegevoegd in plaats van een afzonderlijke Python-runtime. Assetopslag, queue, Blender, GLB-uitwisseling en Docker ontbreken. |
+| 4. Ontwerpstadia | Ruimte, onderdelen plaatsen, verfijnen, views en exports | Gedeeltelijk. Claude kan scènevoorstellen geven met expliciete approval/preview; geen beeldintake, gegenereerde conceptbeelden of catalogusmatching. |
+| 5. Ergonomie | Muis/touch controls; orthografische views; selectiekader; transforms; numeric cm; dupliceren; undo; shared/unique; nested groups; tags; locks; materials; bounds | Gebouwd, browseracceptatie open. Double-click nested editing, breadcrumbs en contextfading gebouwd. Geen face materials, measure tool, connection snapping of planmatige padnavigatie. Geen shared assembly definitions. |
 | 6. Media/VR | Drie realtime kleur-/lichtpresets, fog in immersive, saved cameras, screenshotcode, eye-height camera | Gedeeltelijk en browserongetest. Geen media-upload, UV/corner mapping, videosynchronisatie, WebXR/teleport of Blender-final-renders. |
 | 7. Onderdelen | Zeven procedurale synthetic demo-typen, afmetingen, DEMO-code, zichtbare bronstatus, editable definitions | Gebouwd. Geen fabrikant-CAD, importlicenties, sockets/verbindingen, custom solid CAD of STEP. Geen structurele verificatie. |
-| 8. Export/versioning | XLSX BOM + instance detail, echte PDF conceptaanzichten, CSV, JSON, autosave, 10 herstelpunten | Gebouwd en data/exporttests slagen. PDF-scales gemodelleerd en proefexport gerenderd. Geen GLB/media-zip/checksums/serverrevision history of fabriekstekeningen. |
-| 9. Claude/cost governance | Geen LLM-calls; handmatige editor is volledig onafhankelijk | Nog niet gebouwd. Backendadapter, models/router, agent dashboard, budget/cost ledger volgen na browseracceptatie. Geen kosten gemaakt. |
-| 10. QA-loops | TypeScript/build, geometrie-, state-, selectie-, exporttests; PDF-proefrender | 33 tests slagen. WebGL/browserinteractie, visual regression, Safari, hardware-VR en Blender niet uitgevoerd. Zie TEST_RESULTS.md. |
-| 11. Memory | TASK_STATE, DECISIONS, REQUIREMENTS, TEST_RESULTS; projectcontext en playbook | Handmatig ontwikkellog. Nog geen automatisch projectkennisbeheer of contextdistillatie in de app. |
-| 12. Implementatie | Vertical slice + componentsemantiek + tags/materials + lokale versies + PDF/XLSX | Eerste checkpoint. Eerst echte browseracceptatie en geobserveerde fouten herstellen, daarna backend/Claude. |
+| 8. Export/versioning | XLSX BOM + instance detail, echte PDF conceptaanzichten, CSV, JSON, autosave, 10 herstelpunten | Gebouwd en data/exporttests slagen. PDF-scales gemodelleerd en proefexport gerenderd. Onveranderlijke SQLite-revisies en restore gebouwd. Geen GLB/media-zip/checksums of fabriekstekeningen. |
+| 9. Claude/cost governance | Serveradapter, beschikbaarheidscheck, compacte context, tokenraming, USD-projectbudget/reserveringen/ledger, preview/apply/reject/reconcile | Gebouwd en met fake provider getest. Geen echte API-calls/kosten. Geen automatische router of multi-agent dashboard; echte provideracceptatie open. |
+| 10. QA-loops | TypeScript/build, geometrie-, state-, selectie-, exporttests; PDF-proefrender | 68 tests slagen, inclusief echte HTTP en CLI-start/herstart. WebGL/browserinteractie, visual regression, Safari, hardware-VR en Blender niet uitgevoerd. Zie TEST_RESULTS.md. |
+| 11. Memory | TASK_STATE, DECISIONS, REQUIREMENTS, TEST_RESULTS; projectcontext en playbook | Project-LOG/CONTEXT automatisch uit SQLite afgeleid en laatste dialoog compact meegenomen. Algemene kennisdistillatie en automatische playbookpromotie ontbreken. |
+| 12. Implementatie | Vertical slice + componentsemantiek + tags/materials + lokale versies + PDF/XLSX | Versie 0.2-codecheckpoint; backend/Claude/nested editing toegevoegd. Visuele browseracceptatie blijft open en wordt niet uit headless tests afgeleid. |
 | 13. Oplevering | Laptopstart, eigen GitHub-branch, bron, lockfile, importeerbare 4 × 8 demo en CSV; testverslag | Geen gehoste webpreview of beloofde achtergrondtaak. Zie TASK_STATE voor synchronisatie. |
 
 ## Acceptatie van de eerste versie
@@ -33,12 +33,22 @@ Status **gebouwd** betekent dat de functie in de code bestaat. Waar browserbedie
 - [ ] JSON-download/upload, camera/screenshot/PDF-download en lokale tab-lock via echte browser geverifieerd.
 - [ ] Fysieke iPhone/Safari-controle.
 
+## Aanvullende acceptatie versie 0.2
+
+- [x] SQLite opslaan/heropenen, onveranderlijke revisies en restore als nieuwe revisie getest.
+- [x] Lease/CAS-conflicten en per-tab overname getest via echte HTTP.
+- [x] Werkelijke editorconnection getest op overlappende saves en late responses.
+- [x] Volledig client → HTTP → fake Claude → preview → apply traject getest.
+- [x] Budgetreserveringen, onbekend verbruik, herhaalaanvragen en verouderde voorstellen getest.
+- [x] Geneste groepsselectie, locks, zichtbaarheid, dupliceren en ungroup getest.
+- [x] CLI-start/herstart, persistentie en afwijzen van een tweede serverproces getest.
+- [ ] Nieuwe server-/Claude-/groep-UI werkelijk in browser uitgevoerd.
+- [ ] Echte provideracceptatie; betaalde calls zijn niet in deze bouwronde geautoriseerd.
+
 ## Eerstvolgende fasen
 
-1. Voer docs/MANUAL_QA.md uit; leg werkelijke browserresultaten vast en herstel fouten.
-2. Voeg server-side persistence, revisions en edit lock toe met een expliciet privaat toegangsmodel.
-3. Voeg een server-side Claude-adapter toe; sleutels blijven buiten frontend en Git. Betaalde calls vereisen afzonderlijke autorisatie.
-4. Implementeer geneste componentcontext, connection metadata en catalogusadapters.
-5. Media/UV/corner canvas en read-only WebXR.
-6. Blender queue, hoogwaardige renders, GLB/assetpackage en exportverfijning.
-7. API-budgetdashboard, kennislogs en volledige referentieacceptatie.
+1. Voer docs/MANUAL_QA.md uit en herstel geobserveerde browserfouten.
+2. Connection metadata, meetgereedschap, catalogusadapters en gedeelde assembly-definities.
+3. Media-intake, UV/corner canvas en read-only WebXR.
+4. Blender queue, hoogwaardige renders, GLB/assetpackage en exportverfijning.
+5. Modelroutering, kennisdistillatie en volledige referentieacceptatie.

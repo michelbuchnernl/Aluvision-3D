@@ -218,14 +218,87 @@ export function effectiveMaterial(p: Project, o: Instance): MaterialId {
   return o.material ?? definition(p, o).material;
 }
 /** Root-to-leaf group path, bounded to keep malformed hierarchies from looping. */
-export function groupPath(p:Project,groupId?:string):Group[]{const result:Group[]=[];const seen=new Set<string>();let id=groupId;while(id){if(seen.has(id)||result.length>=32)throw Error('Ongeldige of te diepe groepshiërarchie.');seen.add(id);const g=p.groups.find(v=>v.id===id);if(!g)throw Error('Groepsverwijzing ontbreekt.');result.push(g);id=g.parentId;}return result.reverse();}
-export function groupObjectIds(p:Project,id:string){return p.objects.filter(o=>groupPath(p,o.groupId).some(g=>g.id===id)).map(o=>o.id);}
-export function inEditContext(p:Project,o:Instance,contextId:string|null){return contextId===null||groupPath(p,o.groupId).some(g=>g.id===contextId);}
-export function selectionUnits(p:Project,contextId:string|null){const units=new Map<string,{id:string;objectIds:string[]}>();for(const o of p.objects){if(!inEditContext(p,o,contextId))continue;const path=groupPath(p,o.groupId),index=contextId?path.findIndex(g=>g.id===contextId):-1,child=path[index+1];const id=child?'group:'+child.id:o.id;let unit=units.get(id);if(!unit){unit={id,objectIds:[]};units.set(id,unit);}unit.objectIds.push(o.id);}return [...units.values()];}
-export function selectionAtLevel(p:Project,ids:string[],contextId:string|null){return selectionUnits(p,contextId).filter(unit=>unit.objectIds.some(id=>ids.includes(id))).flatMap(unit=>unit.objectIds);}
-export function childGroupForObject(p:Project,id:string,contextId:string|null){const o=p.objects.find(v=>v.id===id);if(!o||!inEditContext(p,o,contextId))return null;const path=groupPath(p,o.groupId),index=contextId?path.findIndex(g=>g.id===contextId):-1;return path[index+1]?.id??null;}
-export function isLocked(p: Project, o: Instance) {return o.locked||!!p.tags.find(t=>t.id===o.tag)?.locked||groupPath(p,o.groupId).some(g=>g.locked);}
-export function isVisible(p: Project, o: Instance) {return o.visible&&p.tags.find(t=>t.id===o.tag)?.visible!==false&&groupPath(p,o.groupId).every(g=>g.visible!==false);}
+export function groupPath(p: Project, groupId?: string): Group[] {
+  const result: Group[] = [];
+  const seen = new Set<string>();
+  let id = groupId;
+  while (id) {
+    if (seen.has(id) || result.length >= 32)
+      throw Error("Ongeldige of te diepe groepshiërarchie.");
+    seen.add(id);
+    const g = p.groups.find((v) => v.id === id);
+    if (!g) throw Error("Groepsverwijzing ontbreekt.");
+    result.push(g);
+    id = g.parentId;
+  }
+  return result.reverse();
+}
+export function groupObjectIds(p: Project, id: string) {
+  return p.objects
+    .filter((o) => groupPath(p, o.groupId).some((g) => g.id === id))
+    .map((o) => o.id);
+}
+export function inEditContext(
+  p: Project,
+  o: Instance,
+  contextId: string | null,
+) {
+  return (
+    contextId === null ||
+    groupPath(p, o.groupId).some((g) => g.id === contextId)
+  );
+}
+export function selectionUnits(p: Project, contextId: string | null) {
+  const units = new Map<string, { id: string; objectIds: string[] }>();
+  for (const o of p.objects) {
+    if (!inEditContext(p, o, contextId)) continue;
+    const path = groupPath(p, o.groupId),
+      index = contextId ? path.findIndex((g) => g.id === contextId) : -1,
+      child = path[index + 1];
+    const id = child ? "group:" + child.id : o.id;
+    let unit = units.get(id);
+    if (!unit) {
+      unit = { id, objectIds: [] };
+      units.set(id, unit);
+    }
+    unit.objectIds.push(o.id);
+  }
+  return [...units.values()];
+}
+export function selectionAtLevel(
+  p: Project,
+  ids: string[],
+  contextId: string | null,
+) {
+  return selectionUnits(p, contextId)
+    .filter((unit) => unit.objectIds.some((id) => ids.includes(id)))
+    .flatMap((unit) => unit.objectIds);
+}
+export function childGroupForObject(
+  p: Project,
+  id: string,
+  contextId: string | null,
+) {
+  const o = p.objects.find((v) => v.id === id);
+  if (!o || !inEditContext(p, o, contextId)) return null;
+  const path = groupPath(p, o.groupId),
+    index = contextId ? path.findIndex((g) => g.id === contextId) : -1;
+  return path[index + 1]?.id ?? null;
+}
+export function isLocked(p: Project, o: Instance) {
+  return (
+    o.locked ||
+    !!p.tags.find((t) => t.id === o.tag)?.locked ||
+    groupPath(p, o.groupId).some((g) => g.locked)
+  );
+}
+export function isVisible(p: Project, o: Instance) {
+  return (
+    o.visible &&
+    p.tags.find((t) => t.id === o.tag)?.visible !== false &&
+    groupPath(p, o.groupId).every((g) => g.visible !== false)
+  );
+}
 export function newInstance(
   p: Project,
   definitionId: string,
@@ -354,14 +427,50 @@ export function editObjects(
   n.objects.filter((o) => ids.includes(o.id) && !isLocked(n, o)).forEach(edit);
   return n;
 }
-export function duplicate(p:Project,ids:string[],contextId:string|null=null):{project:Project;ids:string[]}{
- const n=clone(p),result:string[]=[];if(p.objects.some(o=>ids.includes(o.id)&&isLocked(p,o)))return {project:n,ids:[]};
- const selected=new Set(ids),mapping=new Map<string,string>();for(const g of p.groups){const descendants=groupObjectIds(p,g.id);if(descendants.length&&descendants.every(id=>selected.has(id))&&g.id!==contextId)mapping.set(g.id,uid());}
- for(const g of p.groups.filter(g=>mapping.has(g.id))){const copy=clone(g);copy.id=mapping.get(g.id)!;copy.name+=' · kopie';if(g.parentId)copy.parentId=mapping.get(g.parentId)??g.parentId;n.groups.push(copy);}
- for(const o of p.objects.filter(o=>selected.has(o.id))){const c=clone(o);c.id=uid();c.name=`${o.name} · kopie`;c.position.x+=20;c.position.z+=20;if(o.groupId&&mapping.has(o.groupId))c.groupId=mapping.get(o.groupId);else if(contextId)c.groupId=contextId;else delete c.groupId;n.objects.push(c);result.push(c.id);}return {project:n,ids:result};
+export function duplicate(
+  p: Project,
+  ids: string[],
+  contextId: string | null = null,
+): { project: Project; ids: string[] } {
+  const n = clone(p),
+    result: string[] = [];
+  if (p.objects.some((o) => ids.includes(o.id) && isLocked(p, o)))
+    return { project: n, ids: [] };
+  const selected = new Set(ids),
+    mapping = new Map<string, string>();
+  for (const g of p.groups) {
+    const descendants = groupObjectIds(p, g.id);
+    if (
+      descendants.length &&
+      descendants.every((id) => selected.has(id)) &&
+      g.id !== contextId
+    )
+      mapping.set(g.id, uid());
+  }
+  for (const g of p.groups.filter((g) => mapping.has(g.id))) {
+    const copy = clone(g);
+    copy.id = mapping.get(g.id)!;
+    copy.name += " · kopie";
+    if (g.parentId) copy.parentId = mapping.get(g.parentId) ?? g.parentId;
+    n.groups.push(copy);
+  }
+  for (const o of p.objects.filter((o) => selected.has(o.id))) {
+    const c = clone(o);
+    c.id = uid();
+    c.name = `${o.name} · kopie`;
+    c.position.x += 20;
+    c.position.z += 20;
+    if (o.groupId && mapping.has(o.groupId)) c.groupId = mapping.get(o.groupId);
+    else if (contextId) c.groupId = contextId;
+    else delete c.groupId;
+    n.objects.push(c);
+    result.push(c.id);
+  }
+  return { project: n, ids: result };
 }
 export function makeUnique(p: Project, ids: string[]): Project {
   const n = clone(p);
+  if (n.objects.some((o) => ids.includes(o.id) && isLocked(n, o))) return n;
   for (const o of n.objects.filter(
     (o) => ids.includes(o.id) && !isLocked(n, o),
   )) {
@@ -374,21 +483,81 @@ export function makeUnique(p: Project, ids: string[]): Project {
   }
   return n;
 }
-export function group(p:Project,ids:string[],contextId:string|null=null):Project{
- const n=clone(p),eligible=n.objects.filter(o=>ids.includes(o.id));if(eligible.length<2||eligible.some(o=>isLocked(n,o)||!inEditContext(n,o,contextId)))return n;
- const selected=new Set(ids),children=n.groups.filter(g=>(g.parentId??null)===contextId);const moved:string[]=[];
- for(const g of children){const members=groupObjectIds(n,g.id);if(members.some(id=>selected.has(id))){if(!members.every(id=>selected.has(id)))return n;moved.push(g.id);}}
- const id=uid(),newGroup:Group={id,name:`Groep ${n.groups.length+1}`,...(contextId?{parentId:contextId}:{})};
- for(const child of children.filter(g=>moved.includes(g.id)))child.parentId=id;
- for(const o of eligible){if(!o.groupId||o.groupId===contextId)o.groupId=id;}
- n.groups.push(newGroup);return n;
+export function group(
+  p: Project,
+  ids: string[],
+  contextId: string | null = null,
+): Project {
+  const n = clone(p),
+    eligible = n.objects.filter((o) => ids.includes(o.id));
+  if (
+    eligible.length < 2 ||
+    eligible.some(
+      (o) =>
+        isLocked(n, o) ||
+        !inEditContext(n, o, contextId) ||
+        groupPath(n, o.groupId).length >= 32,
+    )
+  )
+    return n;
+  const selected = new Set(ids),
+    children = n.groups.filter((g) => (g.parentId ?? null) === contextId);
+  const moved: string[] = [];
+  for (const g of children) {
+    const members = groupObjectIds(n, g.id);
+    if (members.some((id) => selected.has(id))) {
+      if (!members.every((id) => selected.has(id))) return n;
+      moved.push(g.id);
+    }
+  }
+  const id = uid(),
+    newGroup: Group = {
+      id,
+      name: `Groep ${n.groups.length + 1}`,
+      ...(contextId ? { parentId: contextId } : {}),
+    };
+  for (const child of children.filter((g) => moved.includes(g.id)))
+    child.parentId = id;
+  for (const o of eligible) {
+    if (!o.groupId || o.groupId === contextId) o.groupId = id;
+  }
+  n.groups.push(newGroup);
+  return n;
 }
-export function ungroup(p:Project,ids:string[],contextId:string|null=null):Project{
- const n=clone(p);if(n.objects.some(o=>ids.includes(o.id)&&isLocked(n,o)))return n;const selected=new Set(ids),dissolve=n.groups.filter(g=>(g.parentId??null)===contextId&&groupObjectIds(n,g.id).length>0&&groupObjectIds(n,g.id).every(id=>selected.has(id)));
- for(const g of dissolve){for(const o of n.objects.filter(o=>o.groupId===g.id)){if(contextId)o.groupId=contextId;else delete o.groupId;}for(const child of n.groups.filter(c=>c.parentId===g.id)){if(contextId)child.parentId=contextId;else delete child.parentId;}}
- n.groups=n.groups.filter(g=>!dissolve.some(v=>v.id===g.id));return n;
+export function ungroup(
+  p: Project,
+  ids: string[],
+  contextId: string | null = null,
+): Project {
+  const n = clone(p);
+  if (n.objects.some((o) => ids.includes(o.id) && isLocked(n, o))) return n;
+  const selected = new Set(ids),
+    dissolve = n.groups.filter(
+      (g) =>
+        (g.parentId ?? null) === contextId &&
+        groupObjectIds(n, g.id).length > 0 &&
+        groupObjectIds(n, g.id).every((id) => selected.has(id)),
+    );
+  for (const g of dissolve) {
+    for (const o of n.objects.filter((o) => o.groupId === g.id)) {
+      if (contextId) o.groupId = contextId;
+      else delete o.groupId;
+    }
+    for (const child of n.groups.filter((c) => c.parentId === g.id)) {
+      if (contextId) child.parentId = contextId;
+      else delete child.parentId;
+    }
+  }
+  n.groups = n.groups.filter((g) => !dissolve.some((v) => v.id === g.id));
+  return n;
 }
-export function removeObjects(p:Project,ids:string[]):Project{const n=clone(p);if(n.objects.some(o=>ids.includes(o.id)&&isLocked(n,o)))return n;n.objects=n.objects.filter(o=>!ids.includes(o.id));n.groups=n.groups.filter(g=>groupObjectIds(n,g.id).length>0);return n;}
+export function removeObjects(p: Project, ids: string[]): Project {
+  const n = clone(p);
+  if (n.objects.some((o) => ids.includes(o.id) && isLocked(n, o))) return n;
+  n.objects = n.objects.filter((o) => !ids.includes(o.id));
+  n.groups = n.groups.filter((g) => groupObjectIds(n, g.id).length > 0);
+  return n;
+}
 export interface BomRow {
   definitionId: string;
   code: string;
@@ -405,8 +574,11 @@ export function bom(p: Project): BomRow[] {
   for (const o of p.objects) {
     const d = definition(p, o),
       m = effectiveMaterial(p, o),
-      g = groupPath(p,o.groupId).map(g=>g.name).join(" / ") || "—";
-    const key = JSON.stringify([d.id, m, o.groupId??null]);
+      g =
+        groupPath(p, o.groupId)
+          .map((g) => g.name)
+          .join(" / ") || "—";
+    const key = JSON.stringify([d.id, m, o.groupId ?? null]);
     const row = rows.get(key);
     if (row) row.quantity++;
     else
@@ -520,7 +692,18 @@ export function parseProject(raw: string): Project {
       typeof t.locked !== "boolean"
     )
       throw Error("Ongeldige laag.");
-  for(const g of p.groups){if(!text(g.name)||(g.parentId!==undefined&&(!text(g.parentId)||!p.groups.some((v:Group)=>v.id===g.parentId)))||(g.visible!==undefined&&typeof g.visible!=='boolean')||(g.locked!==undefined&&typeof g.locked!=='boolean'))throw Error('Ongeldige groep.');groupPath(p,g.id);}
+  for (const g of p.groups) {
+    if (
+      !text(g.name) ||
+      (g.parentId !== undefined &&
+        (!text(g.parentId) ||
+          !p.groups.some((v: Group) => v.id === g.parentId))) ||
+      (g.visible !== undefined && typeof g.visible !== "boolean") ||
+      (g.locked !== undefined && typeof g.locked !== "boolean")
+    )
+      throw Error("Ongeldige groep.");
+    groupPath(p, g.id);
+  }
 
   for (const o of p.objects)
     if (

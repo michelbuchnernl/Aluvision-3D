@@ -1,6 +1,6 @@
 # Boormester Immersive Studio
 
-Een browsergebaseerde, handmatige 3D-ontwerper voor immersieve ruimtes. Dit is een eerste prototype van de volledige AluVision/Boormester-specificatie. Alle onderdelen zijn synthetische demo-geometrie; er zijn geen fabrikantmodellen, echte catalogusnummers, certificeringen of API-sleutels opgenomen.
+Een browsergebaseerde 3D-ontwerper met een handmatige editor, lokale projectserver en optionele Claude-voorstellen voor immersieve ruimtes. Versie 0.2 is een werkend codeprototype van de volledige AluVision/Boormester-specificatie. Alle onderdelen zijn synthetische demo-geometrie; er zijn geen fabrikantmodellen, echte catalogusnummers, certificeringen of API-sleutels opgenomen.
 
 ## Start op je laptop
 
@@ -32,7 +32,9 @@ npm test
 npm run build
 ```
 
-`dist/` bevat de statische productieversie. Er is geen backend nodig voor de huidige handmatige editor. Core editing, projectopslag en export voeren geen externe API-aanroepen uit. Na installatie zijn geen CDN-assets of externe lettertypen nodig.
+`npm run dev` start de editor op 4173 en de lokale SQLite-API op 8787. De handmatige editor werkt ook zonder serververbinding. Na `npm run build` serveert `npm start` de productieversie en API samen op **http://localhost:8787**. Na installatie zijn geen CDN-assets of externe lettertypen nodig. Handmatig bewerken, bewaren en exporteren doen geen externe API-aanroepen.
+
+Claude staat standaard uit. Zie [docs/SERVER_AND_AI.md](docs/SERVER_AND_AI.md) voor configuratie, kostenbeheer en back-up.
 
 ## Wat is gebouwd
 
@@ -42,9 +44,12 @@ npm run build
 - Klikselectie, Shift-multiselectie, richtingsafhankelijk selectiekader, verplaats-/rotatiegizmo, exacte cm-invoer, dupliceren en verwijderen.
 - Nieuwe objecten op de vloer. Vrije Y-verplaatsing moet expliciet worden ingeschakeld; horizontaal verplaatsen behoudt bestaande hoogte. `Plaats op de vloer` is een afzonderlijke actie.
 - Gedeelde onderdeeldefinities en exemplaren, `Maak uniek`, gedeelde maatwijzigingen en zichtbaar materiaalbereik (exemplaar of definitie).
-- Platte groepen, lagen, zichtbaarheid, object- en laagvergrendeling. Geen geneste bewerkingscontext.
+- Geneste groepen met objectboom, dubbelklik om een groep te bewerken, breadcrumbs en Escape om een niveau terug te gaan. Gesloten groepen selecteren als één eenheid. Groepslocks en zichtbaarheid werken door naar kinderen; dupliceren behoudt de hiërarchie. Selectiemateriaal geldt voor alle geselecteerde exemplaren.
 - Geroteerde begrenzingscontroles, zichtbare overschrijdingen en indicatieve AABB-overlapwaarschuwingen. Geen automatische geometriecorrectie of constructieve beoordeling.
 - Undo/redo tot 100 checkpoints, autosave, maximaal tien lokale herstelpunten, JSON-import/export en een bewerkingslease tussen tabs van dezelfde browser/origin.
+- SQLite-projecten, onveranderlijke serverrevisies, herstellen als nieuwe revisie, per-tab bewerkingslease, expliciete overname en zichtbare revisieconflicten. Lokale wijzigingen blijven bij een conflict beschikbaar voor herstel.
+- Optionele server-side Claude-adapter: compacte scènecontext en eerdere vragen, kostenraming, projectbudget, gebruiksledger, voorstelpreview en expliciet toepassen/verwerpen. Ruimtewijzigingen vragen aparte goedkeuring. De sleutel blijft op de server. Alle provider-tests gebruiken nagebootste antwoorden; er zijn geen echte API-calls uitgevoerd.
+- Automatisch uit SQLite afgeleide project-LOG en CONTEXT. Geen gedeelde componentdefinities voor complete geneste assemblies, autonome multi-agent workflow of algemene kennisdistillatie.
 - XLSX: gegroepeerde onderdelen, alle exemplaren met exacte transforms en projectmetadata. Aantallen worden vóór export vergeleken met de scène.
 - CSV als alternatief; formule-achtige tekst wordt geneutraliseerd.
 - PDF: boven-, voor- en rechterzijaanzicht met echte papiermaat/schaal, ruimteafmetingen, revisie en controleblad. Tekeningen tonen conceptuele omhullingen, geen fabricagedetails. Een actueel browserbeeld wordt toegevoegd als WebGL beschikbaar is.
@@ -52,11 +57,11 @@ npm run build
 
 ## Verificatie en grenzen
 
-**33 geautomatiseerde tests slagen; TypeScript en productie-build slagen.** Zie [TEST_RESULTS.md](TEST_RESULTS.md).
+**68 geautomatiseerde tests slagen; TypeScript, productie-build en formattercontrole slagen.** Zie [TEST_RESULTS.md](TEST_RESULTS.md).
 
 Browserautomatisering is in deze sessie door het browserbeveiligingsbeleid geblokkeerd. Daarom is WebGL-weergave, muis-/touchinteractie, opslag tussen echte tabs en Safari-gedrag nog niet empirisch bevestigd. De eerste vervolgstap is de handmatige acceptatiecheck in [docs/MANUAL_QA.md](docs/MANUAL_QA.md). Een geslaagde build is geen bewijs dat de 3D-weergave werkt.
 
-Nog niet gebouwd: Claude-gespreksinterface/API-adapter, backendopslag, accounts, echte catalogi/importadapters, geneste groepen en edit contexts, losse vlakmaterialen, verbindingssnapping, video/UV-mapping, WebXR, Blender-renderqueue, volledige assetpakketten, API-budgetdashboard en automatisch kennisbeheer. Het volledige overzicht staat in [REQUIREMENTS.md](REQUIREMENTS.md).
+Nog niet gebouwd: accounts en rollen, echte catalogi/importadapters, gedeelde assembly-definities, losse vlakmaterialen, verbindingssnapping, beeldintake, video/UV-mapping, WebXR, Blender-renderqueue, volledige assetpakketten, automatische modelroutering en algemene kennisdistillatie. Het volledige overzicht staat in [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## Bediening
 
@@ -74,6 +79,8 @@ Nog niet gebouwd: Claude-gespreksinterface/API-adapter, backendopslag, accounts,
 | Herstelpunt bewaren | Ctrl/Cmd + S |
 | Passend in beeld | F |
 | Verwijderen / deselecteren | Delete / Escape |
+| Groep bewerken | Dubbelklik in viewport of objectboom |
+| Context omhoog / direct kiezen | Escape / breadcrumb |
 
 X is lengte, Y is omhoog en Z is diepte. Het nulpunt is midden op de vloer. Een objectpositie is het midden van de onderzijde. Model- en exporteenheden zijn centimeters; omzetting naar meters gebeurt expliciet.
 
@@ -81,6 +88,8 @@ X is lengte, Y is omhoog en Z is diepte. Het nulpunt is midden op de vloer. Een 
 
 Browseropslag is lokaal aan deze browser en dit adres. Download JSON voor overdracht naar een ander apparaat of als blijvende kopie. Git bewaart de applicatiebron, niet automatisch je lokaal gemaakte ontwerpen. `examples/immersive-room-4x8.json` is een importeerbare referentiescène.
 
-De lokale tab-lease is geen beveiliging of server-lock. Bij overname wordt het laatste opgeslagen ontwerp geladen. Gebruik de huidige versie niet als publiek schrijfbaar, multi-user systeem.
+Verbind via **Server** om een project in SQLite te bewaren of te openen. Server-autosave gebruikt een seriële opslagqueue en verwachte revisienummers. De serverlease verloopt na 30 seconden en wordt elke 10 seconden vernieuwd. Overname laadt de gezaghebbende serverrevisie. Bij conflict/offline status: bewaar eerst je lokale herstelkopie of JSON en kies daarna bewust welke versie je opent.
+
+De lokale browserlease blijft alleen voor de modus zonder server. De server is standaard uitsluitend op de eigen laptop bereikbaar. Er zijn nog geen accounts/rollen; gebruik dit prototype niet als publiek schrijfbaar systeem. Bewaar de volledige datamap apart van Git; zie de back-upprocedure.
 
 Architectuur: [DECISIONS.md](DECISIONS.md). Exacte vervolgstappen: [TASK_STATE.md](TASK_STATE.md).

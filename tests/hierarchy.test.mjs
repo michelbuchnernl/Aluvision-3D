@@ -1,9 +1,142 @@
-import {test} from 'node:test';
-import assert from 'node:assert/strict';
-import {emptyProject,newInstance,group,ungroup,groupPath,groupObjectIds,selectionAtLevel,selectionUnits,childGroupForObject,isLocked,isVisible,duplicate,removeObjects,parseProject,bom} from '../src/model.ts';
-function fixture(){let p=emptyProject();const a=newInstance(p,'frame-100'),b=newInstance(p,'panel-100'),c=newInstance(p,'table-140');p.objects=[a,b,c];p=group(p,[a.id,b.id]);const inner=p.groups[0].id;p=group(p,[a.id,b.id,c.id]);const outer=p.groups.find(g=>!g.parentId).id;return {p,a,b,c,inner,outer};}
-test('Nested grouping preserves inner structure and selecting at each level resolves the right unit',()=>{const {p,a,b,c,inner,outer}=fixture();assert.deepEqual(groupPath(p,inner).map(g=>g.id),[outer,inner]);assert.deepEqual(new Set(groupObjectIds(p,outer)),new Set([a.id,b.id,c.id]));assert.deepEqual(new Set(selectionAtLevel(p,[a.id],null)),new Set([a.id,b.id,c.id]));assert.deepEqual(new Set(selectionAtLevel(p,[a.id],outer)),new Set([a.id,b.id]));assert.deepEqual(selectionAtLevel(p,[a.id],inner),[a.id]);assert.equal(childGroupForObject(p,a.id,null),outer);assert.equal(childGroupForObject(p,a.id,outer),inner);assert.equal(selectionUnits(p,outer).length,2);});
-test('Parent locks and visibility apply to descendants without changing object flags',()=>{const {p,a,outer}=fixture();p.groups.find(g=>g.id===outer).locked=true;assert.equal(isLocked(p,p.objects[0]),true);assert.equal(p.objects[0].locked,false);assert.equal(duplicate(p,[a.id]).ids.length,0);assert.equal(removeObjects(p,[a.id]).objects.length,3);p.groups.find(g=>g.id===outer).visible=false;assert.equal(isVisible(p,p.objects[0]),false);assert.equal(bom(p).reduce((n,r)=>n+r.quantity,0),3);});
-test('Duplicating a complete assembly clones group IDs while retaining shared component definitions',()=>{const {p,outer}=fixture();const ids=groupObjectIds(p,outer),q=duplicate(p,ids);assert.equal(q.project.groups.length,4);const copies=q.project.objects.filter(o=>q.ids.includes(o.id));assert.equal(copies.length,3);assert.equal(copies[0].definitionId,p.objects[0].definitionId);assert.notEqual(copies[0].groupId,p.objects[0].groupId);assert.equal(groupPath(q.project,copies[0].groupId).length,2);assert.equal(new Set(q.project.groups.map(g=>g.id)).size,4);});
-test('Ungroup lifts child groups one level and deleting the last child removes empty ancestors',()=>{const {p,a,b,c,inner,outer}=fixture();const q=ungroup(p,[a.id,b.id,c.id]);assert.equal(q.groups.some(g=>g.id===outer),false);assert.equal(q.groups.find(g=>g.id===inner).parentId,undefined);assert.equal(q.objects.find(o=>o.id===c.id).groupId,undefined);const deleted=removeObjects(p,[a.id,b.id]);assert.equal(deleted.groups.length,1);assert.equal(deleted.groups[0].id,outer);assert.equal(deleted.objects[0].id,c.id);});
-test('Import rejects group cycles and missing parents, and roundtrips valid nested groups',()=>{const {p,inner,outer}=fixture();assert.deepEqual(parseProject(JSON.stringify(p)).groups,p.groups);const bad=structuredClone(p);bad.groups.find(g=>g.id===outer).parentId=inner;assert.throws(()=>parseProject(JSON.stringify(bad)),/hiërarchie/);bad.groups.find(g=>g.id===outer).parentId='missing';assert.throws(()=>parseProject(JSON.stringify(bad)),/groep/i);});
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  emptyProject,
+  newInstance,
+  group,
+  ungroup,
+  groupPath,
+  groupObjectIds,
+  selectionAtLevel,
+  selectionUnits,
+  childGroupForObject,
+  isLocked,
+  isVisible,
+  duplicate,
+  removeObjects,
+  makeUnique,
+  parseProject,
+  bom,
+} from "../src/model.ts";
+function fixture() {
+  let p = emptyProject();
+  const a = newInstance(p, "frame-100"),
+    b = newInstance(p, "panel-100"),
+    c = newInstance(p, "table-140");
+  p.objects = [a, b, c];
+  p = group(p, [a.id, b.id]);
+  const inner = p.groups[0].id;
+  p = group(p, [a.id, b.id, c.id]);
+  const outer = p.groups.find((g) => !g.parentId).id;
+  return { p, a, b, c, inner, outer };
+}
+test("Nested grouping preserves inner structure and selecting at each level resolves the right unit", () => {
+  const { p, a, b, c, inner, outer } = fixture();
+  assert.deepEqual(
+    groupPath(p, inner).map((g) => g.id),
+    [outer, inner],
+  );
+  assert.deepEqual(
+    new Set(groupObjectIds(p, outer)),
+    new Set([a.id, b.id, c.id]),
+  );
+  assert.deepEqual(
+    new Set(selectionAtLevel(p, [a.id], null)),
+    new Set([a.id, b.id, c.id]),
+  );
+  assert.deepEqual(
+    new Set(selectionAtLevel(p, [a.id], outer)),
+    new Set([a.id, b.id]),
+  );
+  assert.deepEqual(selectionAtLevel(p, [a.id], inner), [a.id]);
+  assert.equal(childGroupForObject(p, a.id, null), outer);
+  assert.equal(childGroupForObject(p, a.id, outer), inner);
+  assert.equal(selectionUnits(p, outer).length, 2);
+});
+test("Parent locks and visibility apply to descendants without changing object flags", () => {
+  const { p, a, outer } = fixture();
+  p.groups.find((g) => g.id === outer).locked = true;
+  assert.equal(isLocked(p, p.objects[0]), true);
+  assert.equal(p.objects[0].locked, false);
+  assert.equal(duplicate(p, [a.id]).ids.length, 0);
+  assert.equal(removeObjects(p, [a.id]).objects.length, 3);
+  p.groups.find((g) => g.id === outer).visible = false;
+  assert.equal(isVisible(p, p.objects[0]), false);
+  assert.equal(
+    bom(p).reduce((n, r) => n + r.quantity, 0),
+    3,
+  );
+});
+test("Duplicating a complete assembly clones group IDs while retaining shared component definitions", () => {
+  const { p, outer } = fixture();
+  const ids = groupObjectIds(p, outer),
+    q = duplicate(p, ids);
+  assert.equal(q.project.groups.length, 4);
+  const copies = q.project.objects.filter((o) => q.ids.includes(o.id));
+  assert.equal(copies.length, 3);
+  assert.equal(copies[0].definitionId, p.objects[0].definitionId);
+  assert.notEqual(copies[0].groupId, p.objects[0].groupId);
+  assert.equal(groupPath(q.project, copies[0].groupId).length, 2);
+  assert.equal(new Set(q.project.groups.map((g) => g.id)).size, 4);
+});
+test("Ungroup lifts child groups one level and deleting the last child removes empty ancestors", () => {
+  const { p, a, b, c, inner, outer } = fixture();
+  const q = ungroup(p, [a.id, b.id, c.id]);
+  assert.equal(
+    q.groups.some((g) => g.id === outer),
+    false,
+  );
+  assert.equal(q.groups.find((g) => g.id === inner).parentId, undefined);
+  assert.equal(q.objects.find((o) => o.id === c.id).groupId, undefined);
+  const deleted = removeObjects(p, [a.id, b.id]);
+  assert.equal(deleted.groups.length, 1);
+  assert.equal(deleted.groups[0].id, outer);
+  assert.equal(deleted.objects[0].id, c.id);
+});
+test("Import rejects group cycles and missing parents, and roundtrips valid nested groups", () => {
+  const { p, inner, outer } = fixture();
+  assert.deepEqual(parseProject(JSON.stringify(p)).groups, p.groups);
+  const bad = structuredClone(p);
+  bad.groups.find((g) => g.id === outer).parentId = inner;
+  assert.throws(() => parseProject(JSON.stringify(bad)), /hiërarchie/);
+  bad.groups.find((g) => g.id === outer).parentId = "missing";
+  assert.throws(() => parseProject(JSON.stringify(bad)), /groep/i);
+});
+
+test("AI removal preserves surviving parent groups and compact context includes the hierarchy", async () => {
+  const { previewProposal, compactScene } =
+    await import("../src/operations.ts");
+  const { p, a, b, c, inner, outer } = fixture();
+  const original = structuredClone(p);
+  const scene = compactScene(p);
+  assert.equal(scene.groups.find((g) => g.id === inner).parentId, outer);
+  const proposal = previewProposal(p, {
+    summary: "Verwijder de tafel",
+    questions: [],
+    operations: [{ type: "remove", ids: [c.id] }],
+  });
+  assert.equal(proposal.project.groups.length, 2);
+  assert.deepEqual(
+    groupPath(proposal.project, inner).map((g) => g.id),
+    [outer, inner],
+  );
+  const pruned = previewProposal(p, {
+    summary: "Verwijder de binnengroep",
+    questions: [],
+    operations: [{ type: "remove", ids: [a.id, b.id] }],
+  });
+  assert.deepEqual(
+    pruned.project.groups.map((g) => g.id),
+    [outer],
+  );
+  assert.deepEqual(p, original);
+});
+
+test("A partly locked closed group cannot become partly unique or be ungrouped", () => {
+  const { p, a, outer } = fixture();
+  p.objects.find((o) => o.id === a.id).locked = true;
+  const ids = groupObjectIds(p, outer);
+  assert.deepEqual(makeUnique(p, ids), p);
+  assert.deepEqual(ungroup(p, ids), p);
+  assert.deepEqual(group(p, ids), p);
+});

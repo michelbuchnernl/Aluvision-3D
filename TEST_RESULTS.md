@@ -6,8 +6,11 @@ Datum: 18 oktober 2026. Omgeving: Linux, Node 24.19.0, npm 11.9.0.
 
 | Controle | Werkelijk resultaat |
 | --- | --- |
-| `npm test` | 33 tests, 33 geslaagd, 0 gefaald |
+| `npm test` | 68 tests, 68 geslaagd, 0 gefaald |
 | `npm run build` | TypeScript-check en Vite-productie-build geslaagd |
+| `npm run format:check` / `git diff --check` | Formatter en whitespacecontrole geslaagd |
+| CLI-start/herstart | Echte Node-server via child process gestart, HTTP-project opgeslagen, tweede schrijver afgewezen, schoon gestopt, SQLite-project na herstart teruggelezen |
+| Client/API/Claude-keten | Werkelijke editorconnection → HTTP → fake provider → preview → toepassen als revisie 2; geen betaalde aanvraag |
 | `npm audit --omit=dev --json` | 0 gemelde kwetsbaarheden in productiedependencytree na uuid-override |
 | XLSX-roundtrip | Bestand in geheugen gegenereerd en opnieuw geopend; BOM-totaal en instanceblad tellen alle 36 demo-objecten |
 | PDF-data | 4 pagina's zonder browserbeeld: drie technische aanzichten en controleblad; A4 landscape, 1:50 voor de demo |
@@ -27,6 +30,13 @@ Datum: 18 oktober 2026. Omgeving: Linux, Node 24.19.0, npm 11.9.0.
 - Excel met unieke definities, maatwijzigingen en lege projecten.
 - PDF-waarschuwingen bij een ongeldige scène zonder scene-mutatie.
 
+- SQLite-transacties, onveranderlijke revisies, restore, heropenen en afgeleide projectlogs.
+- Sessie/CSRF/Origin/Host-toegang, optionele toegangscode, per-tab leases en takeover.
+- Werkelijke editor-opslagqueue bij overlappende saves, revisieconflict, late response voor oud project en restore met onopgeslagen wijzigingen.
+- Claude-modelcontrole, strikt toolformaat, compacte vervolgvragen, tokenraming, atomaire budgetreserveringen, stale proposal en expliciete ruimtegoedkeuring, allemaal met fake provider.
+- Gemeten kosten bij ongeldige output, cacheprijzen, onbekende kosten, reconciliatie, quote-/prijsexpiratie en geen automatische inference-retry.
+- Geneste groepen: selectie per niveau, inherited locks/zichtbaarheid, duplicatie met nieuwe groeps-IDs, ungroup, verwijderen/pruning, cyclus-/referentievalidatie en AI-verwijderen met behoud van parent groups.
+
 ## Gevonden en hersteld tijdens bouwen
 
 1. Floating-point roundtrip had een onterechte test met exacte decimale gelijkheid; vervangen door een passende numerieke tolerantie.
@@ -35,12 +45,16 @@ Datum: 18 oktober 2026. Omgeving: Linux, Node 24.19.0, npm 11.9.0.
 4. Behouden hoogte bij horizontaal verplaatsen expliciet gemaakt; een reeds verhoogde projector valt niet stilzwijgend op de vloer.
 5. uuid-advisory in ExcelJS-dependencytree met compatibele override aangepakt en exporttests herhaald.
 6. Naamvelden committen op blur/Enter zodat elke letter niet een complete undo-stap verbruikt.
+7. Oudere serverresponses kunnen na projectwissel de huidige scène niet vervangen; saves gebruiken een seriële queue en generation guards.
+8. Een tab-id is apart van de gedeelde sessiecookie, zodat twee tabs niet onbedoeld dezelfde lease delen.
+9. Groepsverwijderen in de AI-preview gebruikt dezelfde hiërarchische pruning als handmatig verwijderen. De inspector gebruikt nu echt ungroup op het huidige niveau.
+10. Verborgen kinderen van een geselecteerde groep krijgen bij gizmo-commit dezelfde transformatie uit modeldata; de visuele uitvoering hiervan blijft onderdeel van handmatige QA.
 
 ## Niet geverifieerd
 
-De cloudbrowser wees observatie af via het URL-beveiligingsbeleid. Deze afwijzing is niet omzeild. Het lokale previewhulpmiddel meldde een gestart previewadres, maar er is **geen succesvolle browserobservatie** geweest. Een loopback HTTP-probe bereikte geen server; dat is geen geslaagde startup-smoketest. Het previewproces is na afloop gestopt.
+De cloudbrowser wees observatie af via het URL-beveiligingsbeleid. Deze afwijzing is niet omzeild. Het lokale previewhulpmiddel meldde een gestart previewadres, maar er is **geen succesvolle browserobservatie** geweest. In de eerste ronde bereikte een loopback-probe geen previewserver. In versie 0.2 is serverstart wél apart met echte CLI-/HTTP-tests bevestigd; dit levert nog geen browserobservatie op. Testprocessen worden na afloop gestopt.
 
-Daarom zijn WebGL-weergave, echte controls, downloadinteractie, camera/frustumherstel in browser, autosave/herstel en leasegedrag tussen echte tabs nog niet empirisch bevestigd. Ook fysieke iPhone/Safari, WebXR en Blender zijn niet getest. Er zijn geen browser-screenshots of verzonnen visuele resultaten.
+Daarom zijn WebGL-weergave, echte controls, downloadinteractie, camera/frustumherstel in browser, autosave/herstel en leasegedrag tussen echte tabs nog niet empirisch bevestigd. Ook de nieuwe server-/Claude-/groeppanelen zijn nog niet visueel getest. Echte Claude-providerintegratie, fysieke iPhone/Safari, WebXR en Blender zijn niet getest. Er zijn geen echte API-calls uitgevoerd. Er zijn geen browser-screenshots of verzonnen visuele resultaten.
 
 Vite meldt grote chunks door Three.js en de lazy-loaded Excel/PDF-exporter. De build slaagt, maar werkelijke laadtijd en mobiele performance zijn niet gemeten. Een schone npm-audit is geen volledige security review.
 

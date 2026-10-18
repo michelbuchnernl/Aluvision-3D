@@ -1,4 +1,4 @@
-# Bouwstatus — versie 0.4
+# Bouwstatus — versie 0.5
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -28,6 +28,12 @@
 - Hoekcanvas-demo (Nieuw / demo) en examples/corner-canvas-demo.json. 12 nieuwe tests (93 totaal).
 - Eerste echte browserobservatie (ingebouwde browser, WebGL): Immersief-preset, kalibratiepatroon over de hoek, geüploade afbeelding met 'passend', gegenereerde webm-video die frames doorloopt.
 
+## Toegevoegd in versie 0.5 (read-only VR)
+
+- WebXR-sessie met stick-teleport (voorwaarts richten, loslaten = teleporteren), vloerdoelmarkering en spawn op vrije vloer. Zie docs/VR.md.
+- Teleportregels zijn pure code (src/teleport.ts) met 7 tests: vloerstraal, wandmarge, geroteerde footprints, verborgen/hangende objecten, hoofdoffset, stick-hysterese, startpunt.
+- De renderloop gebruikt nu `setAnimationLoop`; desktop-rendering is in de browser opnieuw bekeken. Sessiestart en controllers zijn **niet** op hardware bewezen; de VR-knop is uitgeschakeld zonder headset.
+
 ## Bewijs
 
 81 tests slagen, inclusief client → echte HTTP → fake Claude → preview → revisie, CLI-start/herstart, proceslock, budgetconcurrency, hiërarchie, uitlijning, meten en echte GLB-roundtrips. TypeScript/productie-build, formatter, diff-whitespacecontrole slagen. Productieaudit meldt 0 kwetsbaarheden. Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen WebGL/UI/Safari-acceptatie geclaimd. Zie TEST_RESULTS.
@@ -52,7 +58,7 @@ Editor: http://localhost:4173. API: 8787. Productie: `npm run build` en `npm sta
 
 1. Volledige browseracceptatie van docs/MANUAL_QA.md en geobserveerde fouten herstellen.
 2. Catalogusadapters, gedeelde assembly-definities, socket-editor en magnetische sleep-snapping.
-3. Read-only WebXR met teleport; media-export in projectpakket; schermafbeelding-/regressielus.
+3. Echte headset-/emulatorcontrole van VR; media-export in projectpakket; schermafbeelding-/regressielus.
 4. Blender-renderqueue, GLB-import/assetpackage en exportverfijning.
 5. Modelroutering/kennisdistillatie en volledige referentieacceptatie.
 

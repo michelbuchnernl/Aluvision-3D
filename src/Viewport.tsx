@@ -3,6 +3,13 @@ import { rectangleSelection, transformAroundPivot } from "./interaction";
 import type { ScreenBounds } from "./interaction";
 import { createPart } from "./sceneGeometry";
 import { canvasLayout, sliceUv } from "./media";
+import {
+  teleportTarget,
+  rigPositionFor,
+  thumbstickStep,
+  startPoint,
+} from "./teleport";
+import type { TeleportTarget } from "./teleport";
 import type { CanvasLayout } from "./media";
 import type { MediaRuntime } from "./mediaRuntime";
 import * as THREE from "three";
@@ -20,7 +27,10 @@ import {
 } from "./model";
 import type { Project, Vec3, View, Preset, CameraBookmark } from "./model";
 export type Tool = "select" | "move" | "rotate" | "measure";
+export type VrState = "unsupported" | "ready" | "active";
 export interface ViewportApi {
+  enterVr: () => Promise<string | void>;
+  exitVr: () => void;
   fit: () => void;
   capture: () => string;
   bookmark: () => Omit<CameraBookmark, "id" | "name">;
@@ -33,6 +43,7 @@ interface Props {
   view: View;
   preset: Preset;
   media?: MediaRuntime;
+  onVrChange?: (state: VrState) => void;
   mediaVersion?: number;
   snap: number;
   freeHeight: boolean;
@@ -76,8 +87,13 @@ export default function Viewport(props: Props) {
     renderer.domElement.setAttribute("aria-label", "3D-ontwerpvenster");
     renderer.domElement.setAttribute("role", "img");
     const scene = new THREE.Scene();
+    renderer.xr.enabled = true;
+    renderer.xr.setReferenceSpaceType("local-floor");
     const perspective = new THREE.PerspectiveCamera(42, 1, 1, 30000);
     const ortho = new THREE.OrthographicCamera(-500, 500, 500, -500, 1, 30000);
+    // The perspective camera lives in a rig so a headset can be scaled (1 m = 100 cm) and teleported.
+    const rig = new THREE.Group();
+    rig.add(perspective);
     let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera =
       perspective;
     perspective.position.set(1050, 760, 1000);
@@ -101,6 +117,7 @@ export default function Viewport(props: Props) {
     scene.add(pivot);
     const content = new THREE.Group();
     scene.add(content);
+    scene.add(rig);
     const objects = new Map<string, THREE.Group>();
     let outline: THREE.BoxHelper[] = [];
     let active = false;
@@ -241,6 +258,46 @@ export default function Viewport(props: Props) {
       controls.update();
     };
     const api: ViewportApi = {
+      enterVr: async () => {
+        const xr = (navigator as any).xr;
+        if (!xr) return "WebXR is niet beschikbaar in deze browser.";
+        try {
+          const session = await xr.requestSession("immersive-vr", {
+            optionalFeatures: ["local-floor", "bounded-floor"],
+          });
+          try {
+            await session.requestReferenceSpace("local-floor");
+          } catch {
+            await session.end();
+            return "Deze headset geeft geen vloerhoogte (local-floor); de VR-wandeling vraagt die.";
+          }
+          setView("perspective");
+          vrSaved = {
+            position: perspective.position.clone(),
+            quaternion: perspective.quaternion.clone(),
+          };
+          perspective.near = 0.01;
+          perspective.far = 300;
+          perspective.updateProjectionMatrix();
+          rig.scale.setScalar(100);
+          const spawn = startPoint(latest.current.project);
+          rig.position.set(spawn?.x ?? 0, 0, spawn?.z ?? 0);
+          if (scene.fog instanceof THREE.FogExp2) scene.fog.density *= 100;
+          helper.visible = false;
+          session.addEventListener("end", endVr);
+          await renderer.xr.setSession(session);
+          latest.current.onVrChange?.("active");
+          return spawn
+            ? undefined
+            : "Geen vrije vloerlocatie gevonden; je start in het midden.";
+        } catch (e) {
+          endVr();
+          return e instanceof Error ? e.message : "VR kon niet starten.";
+        }
+      },
+      exitVr: () => {
+        void renderer.xr.getSession()?.end();
+      },
       fit,
       capture: () => {
         renderer.render(scene, camera);
@@ -437,9 +494,119 @@ export default function Viewport(props: Props) {
     renderer.domElement.addEventListener("pointerdown", pointerDown);
     renderer.domElement.addEventListener("pointermove", pointerMove);
     window.addEventListener("pointerup", pointerUp);
-    const animate = () => {
-      frame = requestAnimationFrame(animate);
+    // Read-only WebXR: thumbstick forward aims at the floor, release teleports. No editing in VR.
+    const marker = new THREE.Mesh(
+      new THREE.RingGeometry(14, 20, 40).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({
+        color: "#32b2a1",
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.9,
+        depthTest: false,
+      }),
+    );
+    marker.visible = false;
+    marker.renderOrder = 999;
+    scene.add(marker);
+    const rayLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(),
+        new THREE.Vector3(0, 0, -1),
+      ]),
+      new THREE.LineBasicMaterial({ color: "#32b2a1", depthTest: false }),
+    );
+    rayLine.visible = false;
+    rayLine.renderOrder = 999;
+    scene.add(rayLine);
+    const pads = [0, 1].map((i) => {
+      const c = renderer.xr.getController(i);
+      rig.add(c);
+      const s = {
+        c,
+        pad: undefined as Gamepad | undefined,
+        aiming: false,
+        last: undefined as TeleportTarget | undefined,
+      };
+      c.addEventListener("connected", (e: any) => {
+        s.pad = e.data?.gamepad;
+      });
+      c.addEventListener("disconnected", () => {
+        s.pad = undefined;
+        s.aiming = false;
+      });
+      return s;
+    });
+    const hideAim = () => {
+      marker.visible = false;
+      rayLine.visible = false;
+    };
+    const teleportTo = (point: { x: number; z: number }) => {
+      const head = renderer.xr
+        .getCamera()
+        .getWorldPosition(new THREE.Vector3());
+      const pos = rigPositionFor(point, {
+        x: head.x - rig.position.x,
+        z: head.z - rig.position.z,
+      });
+      rig.position.set(pos.x, 0, pos.z);
+    };
+    const xrFrame = () => {
+      const project = latest.current.project;
+      for (const s of pads) {
+        const step = thumbstickStep(
+          s.aiming,
+          s.pad ? (s.pad.axes[3] ?? s.pad.axes[1] ?? 0) : 0,
+        );
+        s.aiming = step.aiming;
+        if (step.event === "commit") {
+          if (s.last?.valid) teleportTo(s.last.point);
+          s.last = undefined;
+          hideAim();
+        } else if (s.aiming) {
+          const origin = s.c.getWorldPosition(new THREE.Vector3()),
+            dir = new THREE.Vector3(0, 0, -1).applyQuaternion(
+              s.c.getWorldQuaternion(new THREE.Quaternion()),
+            );
+          const t = teleportTarget(project, v(origin), v(dir));
+          s.last = t;
+          if (t) {
+            marker.position.set(t.point.x, 1, t.point.z);
+            (marker.material as THREE.MeshBasicMaterial).color.set(
+              t.valid ? "#32b2a1" : "#f17c6b",
+            );
+            rayLine.geometry.setFromPoints([
+              origin,
+              new THREE.Vector3(t.point.x, 0, t.point.z),
+            ]);
+            marker.visible = rayLine.visible = true;
+          } else hideAim();
+        }
+      }
+    };
+    let vrSaved: {
+      position: THREE.Vector3;
+      quaternion: THREE.Quaternion;
+    } | null = null;
+    const endVr = () => {
+      if (!vrSaved) return;
+      rig.scale.setScalar(1);
+      rig.position.set(0, 0, 0);
+      perspective.near = 1;
+      perspective.far = 30000;
+      perspective.position.copy(vrSaved.position);
+      perspective.quaternion.copy(vrSaved.quaternion);
+      perspective.updateProjectionMatrix();
+      if (scene.fog instanceof THREE.FogExp2) scene.fog.density /= 100;
+      helper.visible = true;
+      vrSaved = null;
+      hideAim();
       controls.update();
+      resize();
+      latest.current.onVrChange?.("ready");
+    };
+    const animate = () => {
+      if (renderer.xr.isPresenting) xrFrame();
+      else controls.update();
       const l = latest.current;
       l.media?.tick(
         l.project.canvases ?? [],
@@ -448,7 +615,7 @@ export default function Viewport(props: Props) {
       );
       renderer.render(scene, camera);
     };
-    animate();
+    renderer.setAnimationLoop(animate);
     runtime.current = {
       scene,
       content,
@@ -467,8 +634,21 @@ export default function Viewport(props: Props) {
     };
     setView("perspective");
     latest.current.onReady(api);
+    const xrNav = (navigator as any).xr;
+    if (xrNav?.isSessionSupported)
+      xrNav
+        .isSessionSupported("immersive-vr")
+        .then((ok: boolean) =>
+          latest.current.onVrChange?.(ok ? "ready" : "unsupported"),
+        )
+        .catch(() => latest.current.onVrChange?.("unsupported"));
+    else latest.current.onVrChange?.("unsupported");
     return () => {
-      cancelAnimationFrame(frame);
+      renderer.setAnimationLoop(null);
+      renderer.xr
+        .getSession()
+        ?.end()
+        .catch(() => {});
       observer.disconnect();
       renderer.domElement.removeEventListener("dblclick", doubleClick);
       window.removeEventListener("pointerup", pointerUp);
@@ -499,7 +679,10 @@ export default function Viewport(props: Props) {
     scene.background = new THREE.Color(dark ? "#101b25" : "#e4e9ec");
     scene.fog =
       props.preset === "immersive"
-        ? new THREE.FogExp2("#101b25", 0.00028)
+        ? new THREE.FogExp2(
+            "#101b25",
+            0.00028 * (r.renderer.xr.isPresenting ? 100 : 1),
+          )
         : null;
     r.renderer.toneMappingExposure = dark ? 1.1 : 1.15;
     const ambient = new THREE.HemisphereLight(

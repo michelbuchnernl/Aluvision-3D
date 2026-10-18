@@ -45,9 +45,10 @@ import {
   CircleDot,
   ArrowUpRight,
   Clapperboard,
+  Glasses,
 } from "lucide-react";
 import Viewport from "./Viewport";
-import type { Tool, ViewportApi } from "./Viewport";
+import type { Tool, ViewportApi, VrState } from "./Viewport";
 import {
   CATALOG,
   MATERIALS,
@@ -298,6 +299,7 @@ function App() {
     [exportBusy, setExportBusy] = useState(false);
   const [mediaRuntime] = useState(() => new MediaRuntime());
   const [mediaVersion, setMediaVersion] = useState(0);
+  const [vrState, setVrState] = useState<VrState>("unsupported");
   useEffect(
     () => mediaRuntime.subscribe(() => setMediaVersion(mediaRuntime.version)),
     [mediaRuntime],
@@ -1213,6 +1215,7 @@ function App() {
             view={view}
             preset={preset}
             media={mediaRuntime}
+            onVrChange={setVrState}
             mediaVersion={mediaVersion}
             snap={snap}
             freeHeight={freeHeight}
@@ -1378,6 +1381,23 @@ function App() {
                 onClick={() => api.current?.fit()}
               >
                 <Maximize size={17} />
+              </IconButton>
+              <IconButton
+                title={
+                  vrState === "unsupported"
+                    ? "VR niet beschikbaar: geen WebXR-headset gevonden"
+                    : vrState === "active"
+                      ? "VR verlaten"
+                      : "VR-wandeling (alleen kijken, teleport met stick)"
+                }
+                disabled={vrState === "unsupported"}
+                onClick={async () => {
+                  if (vrState === "active") return api.current?.exitVr();
+                  const problem = await api.current?.enterVr();
+                  if (problem) announce(problem);
+                }}
+              >
+                <Glasses size={17} />
               </IconButton>
               <IconButton
                 title="Standpunt opslaan"
@@ -2143,11 +2163,13 @@ function App() {
                 <p className="fine-print">
                   Op touch: één vinger om rond te kijken, twee om te
                   pannen/zoomen. Gebruik invoervelden voor precies plaatsen. De
-                  editor werkt zonder AI-sleutel. API-koppeling met Blender en
-                  WebXR zijn nog niet geïmplementeerd; media-/hoekcanvas staat
-                  in Media. Excel bevat een onderdelen- en exemplarenblad; de
-                  PDF bevat conceptuele aanzichten op schaal, geen
-                  fabricagetekeningen.
+                  editor werkt zonder AI-sleutel. Blender is nog niet
+                  geïmplementeerd. VR (alleen kijken; duw de stick naar voren en
+                  laat los om naar een vrije vloerlocatie te teleporteren) is
+                  logica-getest maar nog niet op een echte headset geprobeerd;
+                  mediacanvas staat onder Media. Excel bevat een onderdelen- en
+                  exemplarenblad; de PDF bevat conceptuele aanzichten op schaal,
+                  geen fabricagetekeningen.
                 </p>
                 <p className="fine-print">
                   Coördinaten: X = lengte, Y = hoogte, Z = diepte. Het nulpunt

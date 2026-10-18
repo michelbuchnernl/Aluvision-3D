@@ -74,3 +74,10 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - tests/media.test.mjs: hoekgeometrie (7 vlakke naden 0°, laatste 90°, alle gaten 0 cm), ketenvolgorde bij geschudde selectie, gat van 4 cm exact gemeld, niet-vierkante pixels, fit-modi, slice-UV, pruning bij verwijderen, JSON-roundtrip en afwijzing van kapotte verwijzingen, voorbeeldbestand.
 - Handmatig in de ingebouwde browser (WebGL, Chrome-engine): kalibratiepatroon loopt door op de hoekpaneel; afbeelding met 'passend' toont zwarte randen en juiste leesrichting; webm-video speelde (frame 32 → 74 binnen ~1 s) op het hele canvas.
 - Niet gedaan: Safari/Firefox, hardwarematige VR, geluid, mediapakket in export, geautomatiseerde screenshotregressie.
+
+## Versie 0.5 — VR-teleport (18 oktober 2026)
+
+- `npm test`: 100 tests geslaagd; `npm run check` en `npm run build` slagen.
+- tests/teleport.test.mjs: 7 hardwarevrije tests (zie docs/VR.md).
+- Browser: renderloop na de overstap naar `setAnimationLoop` getoond, geen consolefouten; VR-knop uitgeschakeld zonder headset (`navigator.xr` aanwezig, `immersive-vr` niet ondersteund).
+- Niet geverifieerd: daadwerkelijke XR-sessie, controllerinput, schaalrig, Safari/Vision Pro.

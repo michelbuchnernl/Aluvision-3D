@@ -44,6 +44,7 @@ import {
   CheckCircle2,
   CircleDot,
   ArrowUpRight,
+  Clapperboard,
 } from "lucide-react";
 import Viewport from "./Viewport";
 import type { Tool, ViewportApi } from "./Viewport";
@@ -53,6 +54,7 @@ import {
   uid,
   clone,
   demoProject,
+  mediaDemoProject,
   emptyProject,
   definition,
   effectiveMaterial,
@@ -82,6 +84,8 @@ import type { Project, History, View, Preset, Vec3, MaterialId } from "./model";
 import { useProjectServer } from "./useProjectServer";
 import { SceneTree } from "./SceneTree";
 import { AlignmentPanel, MeasurementPanel } from "./SpatialTools";
+import { MediaPanel } from "./MediaPanel";
+import { MediaRuntime } from "./mediaRuntime";
 import { applyAlignmentPreview, removeConnection } from "./spatial";
 import type { AlignmentPreview } from "./spatial";
 import { saveBytes } from "./download";
@@ -279,6 +283,7 @@ function App() {
       | "server"
       | "ai"
       | "align"
+      | "media"
     >(null),
     [toast, setToast] = useState(""),
     [saved, setSaved] = useState(true),
@@ -291,6 +296,12 @@ function App() {
     [localReadOnly, setReadOnly] = useState(false),
     [exportMenu, setExportMenu] = useState(false),
     [exportBusy, setExportBusy] = useState(false);
+  const [mediaRuntime] = useState(() => new MediaRuntime());
+  const [mediaVersion, setMediaVersion] = useState(0);
+  useEffect(
+    () => mediaRuntime.subscribe(() => setMediaVersion(mediaRuntime.version)),
+    [mediaRuntime],
+  );
   const api = useRef<ViewportApi | null>(null),
     file = useRef<HTMLInputElement>(null),
     owner = useRef(uid());
@@ -777,6 +788,14 @@ function App() {
           </button>
 
           <button
+            className="button subtle"
+            aria-label="Media en projectiecanvas"
+            onClick={() => setModal("media")}
+          >
+            <Clapperboard size={16} />
+            <span className="desktop-label">Media</span>
+          </button>
+          <button
             className="button subtle desktop-label"
             onClick={() => setModal("versions")}
           >
@@ -1193,6 +1212,8 @@ function App() {
             tool={readOnly && tool !== "measure" ? "select" : tool}
             view={view}
             preset={preset}
+            media={mediaRuntime}
+            mediaVersion={mediaVersion}
             snap={snap}
             freeHeight={freeHeight}
             contextId={showingPreview ? null : editGroupId}
@@ -2006,7 +2027,10 @@ function App() {
           <section
             className={
               "modal " +
-              (modal === "bom" || modal === "server" || modal === "ai"
+              (modal === "bom" ||
+              modal === "server" ||
+              modal === "ai" ||
+              modal === "media"
                 ? "wide"
                 : "")
             }
@@ -2015,19 +2039,21 @@ function App() {
             aria-label={
               modal === "align"
                 ? "Demo-uitlijnvlakken verbinden"
-                : modal === "server"
-                  ? "Serverprojecten en revisies"
-                  : modal === "ai"
-                    ? "Ontwerpen met Claude"
-                    : modal === "bom"
-                      ? "Onderdelenlijst"
-                      : modal === "room"
-                        ? "Ruimteafmetingen"
-                        : modal === "versions"
-                          ? "Versiegeschiedenis"
-                          : modal === "new"
-                            ? "Nieuw ontwerp"
-                            : "Bediening en informatie"
+                : modal === "media"
+                  ? "Media en projectiecanvas"
+                  : modal === "server"
+                    ? "Serverprojecten en revisies"
+                    : modal === "ai"
+                      ? "Ontwerpen met Claude"
+                      : modal === "bom"
+                        ? "Onderdelenlijst"
+                        : modal === "room"
+                          ? "Ruimteafmetingen"
+                          : modal === "versions"
+                            ? "Versiegeschiedenis"
+                            : modal === "new"
+                              ? "Nieuw ontwerp"
+                              : "Bediening en informatie"
             }
             onClick={(e) => e.stopPropagation()}
           >
@@ -2050,6 +2076,17 @@ function App() {
                   setTool("select");
                   setMeasurePoints([]);
                 }}
+              />
+            )}
+            {modal === "media" && (
+              <MediaPanel
+                project={p}
+                selected={selected}
+                readOnly={readOnly}
+                runtime={mediaRuntime}
+                version={mediaVersion}
+                onChange={change}
+                onMessage={announce}
               />
             )}
             {modal === "server" && (
@@ -2106,10 +2143,11 @@ function App() {
                 <p className="fine-print">
                   Op touch: één vinger om rond te kijken, twee om te
                   pannen/zoomen. Gebruik invoervelden voor precies plaatsen. De
-                  editor werkt zonder AI-sleutel. API, Blender, WebXR en
-                  videomapping zijn nog niet geïmplementeerd. Excel bevat een
-                  onderdelen- en exemplarenblad; de PDF bevat conceptuele
-                  aanzichten op schaal, geen fabricagetekeningen.
+                  editor werkt zonder AI-sleutel. API-koppeling met Blender en
+                  WebXR zijn nog niet geïmplementeerd; media-/hoekcanvas staat
+                  in Media. Excel bevat een onderdelen- en exemplarenblad; de
+                  PDF bevat conceptuele aanzichten op schaal, geen
+                  fabricagetekeningen.
                 </p>
                 <p className="fine-print">
                   Coördinaten: X = lengte, Y = hoogte, Z = diepte. Het nulpunt
@@ -2325,6 +2363,19 @@ function App() {
                   >
                     <Box size={18} />
                     Laad 4 × 8 m demo
+                  </button>
+                  <button
+                    className="button"
+                    disabled={readOnly}
+                    onClick={() => {
+                      snapshot();
+                      change(mediaDemoProject());
+                      setSelected([]);
+                      setModal(null);
+                    }}
+                  >
+                    <Clapperboard size={18} />
+                    Laad hoekcanvas-demo (90°)
                   </button>
                 </div>
               </>

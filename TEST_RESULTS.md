@@ -67,3 +67,10 @@ Daarom zijn WebGL-weergave, echte controls, downloadinteractie, camera/frustumhe
 Vite meldt grote chunks door Three.js en de lazy-loaded Excel/PDF-exporter. De build slaagt, maar werkelijke laadtijd en mobiele performance zijn niet gemeten. Een schone npm-audit is geen volledige security review.
 
 Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit prototype in gebruik wordt genomen.
+
+## Versie 0.4 — mediacanvas (18 oktober 2026, Node 25.9 lokaal)
+
+- `npm test`: 93 tests, alle geslaagd. `npm run check`, `format:check` en `npm run build` slagen.
+- tests/media.test.mjs: hoekgeometrie (7 vlakke naden 0°, laatste 90°, alle gaten 0 cm), ketenvolgorde bij geschudde selectie, gat van 4 cm exact gemeld, niet-vierkante pixels, fit-modi, slice-UV, pruning bij verwijderen, JSON-roundtrip en afwijzing van kapotte verwijzingen, voorbeeldbestand.
+- Handmatig in de ingebouwde browser (WebGL, Chrome-engine): kalibratiepatroon loopt door op de hoekpaneel; afbeelding met 'passend' toont zwarte randen en juiste leesrichting; webm-video speelde (frame 32 → 74 binnen ~1 s) op het hele canvas.
+- Niet gedaan: Safari/Firefox, hardwarematige VR, geluid, mediapakket in export, geautomatiseerde screenshotregressie.

@@ -2,6 +2,9 @@ import { useEffect, useRef } from "react";
 import { rectangleSelection, transformAroundPivot } from "./interaction";
 import type { ScreenBounds } from "./interaction";
 import { createPart } from "./sceneGeometry";
+import { canvasLayout, sliceUv } from "./media";
+import type { CanvasLayout } from "./media";
+import type { MediaRuntime } from "./mediaRuntime";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
@@ -29,6 +32,8 @@ interface Props {
   tool: Tool;
   view: View;
   preset: Preset;
+  media?: MediaRuntime;
+  mediaVersion?: number;
   snap: number;
   freeHeight: boolean;
   contextId: string | null;
@@ -435,6 +440,12 @@ export default function Viewport(props: Props) {
     const animate = () => {
       frame = requestAnimationFrame(animate);
       controls.update();
+      const l = latest.current;
+      l.media?.tick(
+        l.project.canvases ?? [],
+        runtime.current?.layouts ?? new Map(),
+        l.project.media ?? [],
+      );
       renderer.render(scene, camera);
     };
     animate();
@@ -451,6 +462,7 @@ export default function Viewport(props: Props) {
         if (runtime.current) runtime.current.outline = o;
       },
       renderer,
+      layouts: new Map<string, CanvasLayout>(),
       active: () => active,
     };
     setView("perspective");
@@ -572,6 +584,20 @@ export default function Viewport(props: Props) {
         .filter((i) => i.severity === "error")
         .map((i) => i.objectId),
     );
+    const layouts = new Map<string, CanvasLayout>(),
+      slices = new Map<
+        string,
+        { ls: CanvasLayout["surfaces"][0]; tex: THREE.Texture }
+      >();
+    for (const c of p.canvases ?? []) {
+      const layout = canvasLayout(p, c);
+      layouts.set(c.id, layout);
+      const asset = p.media?.find((m) => m.id === c.mediaId);
+      if (!asset || !props.media) continue;
+      const tex = props.media.textureFor(c, layout, asset);
+      for (const ls of layout.surfaces) slices.set(ls.objectId, { ls, tex });
+    }
+    r.layouts = layouts;
     for (const o of p.objects) {
       if (!isVisible(p, o)) continue;
       const d = definition(p, o),
@@ -588,6 +614,9 @@ export default function Viewport(props: Props) {
         emissiveIntensity: props.preset === "immersive" ? 0.6 : 0.16,
       });
       const g = createPart(d, material);
+      const slice = slices.get(o.id);
+      if (slice && d.kind === "panel")
+        applySlice(g, material, slice.ls, slice.tex);
       g.position.copy(v(o.position));
       g.rotation.y = (o.rotation * Math.PI) / 180;
       g.userData.instance = o;
@@ -678,6 +707,7 @@ export default function Viewport(props: Props) {
     props.selected,
     props.tool,
     props.preset,
+    props.mediaVersion,
     props.snap,
     props.freeHeight,
     props.contextId,
@@ -687,6 +717,31 @@ export default function Viewport(props: Props) {
     runtime.current?.setView(props.view);
   }, [props.view]);
   return <div className="viewport" ref={host} data-testid="viewport" />;
+}
+/** Puts one slice of a shared canvas texture on the inward box face of a panel. */
+function applySlice(
+  g: THREE.Group,
+  base: THREE.Material,
+  ls: CanvasLayout["surfaces"][0],
+  tex: THREE.Texture,
+) {
+  const mesh = g.children.find((c: any) => c.isMesh) as THREE.Mesh | undefined;
+  if (!mesh || !(mesh.geometry instanceof THREE.BoxGeometry)) return;
+  // BoxGeometry face order: +x, -x, +y, -y, +z, -z; four vertices per face.
+  const face = ls.face === "+z" ? 4 : 5,
+    uv = mesh.geometry.getAttribute("uv");
+  for (let i = face * 4; i < face * 4 + 4; i++) {
+    const m = sliceUv(ls, uv.getX(i), uv.getY(i));
+    uv.setXY(i, m.u, m.v);
+  }
+  uv.needsUpdate = true;
+  const projected = new THREE.MeshBasicMaterial({
+    map: tex,
+    toneMapped: false,
+  });
+  mesh.material = [0, 1, 2, 3, 4, 5].map((i) =>
+    i === face ? projected : base,
+  );
 }
 function dispose(root: THREE.Object3D) {
   const materials = new Set<THREE.Material>();
@@ -699,7 +754,7 @@ function dispose(root: THREE.Object3D) {
       );
   });
   materials.forEach((m: any) => {
-    m.map?.dispose();
+    if (!m.map?.userData.shared) m.map?.dispose();
     m.dispose();
   });
 }

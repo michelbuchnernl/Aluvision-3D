@@ -9,6 +9,8 @@ import type {
   ConnectionSocket,
   SceneConnection,
 } from "./connectionMetadata.ts";
+import { pruneCanvases, validateMedia } from "./media.ts";
+import type { MediaAsset, ProjectionCanvas } from "./media.ts";
 /** Canonical units: centimetres. x = length, y = up, z = depth. Positions use bottom centre. */
 export type Vec3 = { x: number; y: number; z: number };
 export type Kind =
@@ -82,6 +84,8 @@ export interface Project {
   groups: Group[];
   cameras: CameraBookmark[];
   connections?: SceneConnection[];
+  media?: MediaAsset[];
+  canvases?: ProjectionCanvas[];
   updatedAt: string;
 }
 export interface Issue {
@@ -358,6 +362,43 @@ export function demoProject(): Project {
   p.objects.push(pr);
   return p;
 }
+/** Demo with one projection canvas that turns a 90° corner (7 long-wall panels + 1 short-wall panel). */
+export function mediaDemoProject(): Project {
+  const p = demoProject();
+  p.name = "Hoekcanvas · 4 × 8 m";
+  const longWall = p.objects.filter(
+    (o) => o.definitionId === "panel-100" && o.position.z < 0,
+  );
+  const first = longWall.sort((a, b) => a.position.x - b.position.x)[0];
+  p.objects = p.objects.filter((o) => o.id !== first.id);
+  for (const o of longWall) if (o.id !== first.id) o.position.x -= 6;
+  const corner = newInstance(p, "panel-100", { x: 396, y: 0, z: -140 });
+  corner.rotation = 90;
+  p.objects.push(corner);
+  const run = [...longWall.filter((o) => o.id !== first.id), corner];
+  p.media = [
+    {
+      id: "test-pattern",
+      name: "Kalibratiepatroon",
+      kind: "test-pattern",
+      widthPx: 2400,
+      heightPx: 750,
+    },
+  ];
+  p.canvases = [
+    {
+      id: "canvas-corner",
+      name: "Hoekcanvas",
+      surfaceIds: run.map((o) => o.id),
+      widthPx: 2400,
+      heightPx: 750,
+      fit: "stretch",
+      mediaId: "test-pattern",
+      showSeams: true,
+    },
+  ];
+  return p;
+}
 export function bounds(p: Project, o: Instance) {
   const s = definition(p, o).size,
     a = (o.rotation * Math.PI) / 180;
@@ -613,6 +654,7 @@ export function removeObjects(p: Project, ids: string[]): Project {
     n.connections = n.connections.filter(
       (c) => !ids.includes(c.from.objectId) && !ids.includes(c.to.objectId),
     );
+  if (n.canvases) n.canvases = pruneCanvases(n.canvases, ids);
   return n;
 }
 export interface BomRow {
@@ -807,6 +849,14 @@ export function parseProject(raw: string): Project {
       }
     }
   }
+  const mediaParts =
+    p.media !== undefined || p.canvases !== undefined
+      ? validateMedia(
+          p.media,
+          p.canvases,
+          new Set(p.objects.map((o: Instance) => o.id)),
+        )
+      : undefined;
   for (const c of p.cameras)
     if (
       !text(c.name) ||
@@ -831,6 +881,7 @@ export function parseProject(raw: string): Project {
     groups: p.groups,
     cameras: p.cameras,
     ...(p.connections !== undefined ? { connections: p.connections } : {}),
+    ...(mediaParts ? mediaParts : {}),
     updatedAt: typeof p.updatedAt === "string" ? p.updatedAt : now(),
   };
 }

@@ -1,4 +1,4 @@
-# Bouwstatus — versie 0.3
+# Bouwstatus — versie 0.4
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -20,6 +20,13 @@
 - Tijdelijke 2-puntsmeting met viewportlijn, 3D/horizontale afstand en exacte cm-invoer; shortcut T.
 - GLB-export via dezelfde geometrie met meterconversie, hiërarchie/identiteit/materialen en expliciet include-hidden. Echte binary roundtrip; geen GLB-import.
 - Importeerbaar voorbeeld examples/connected-demo-frames.json en gebruiksdocument docs/SPATIAL_TOOLS.md.
+
+## Toegevoegd in versie 0.4 (mediacanvas)
+
+- Projectiecanvas over een geordende paneelreeks, ook om een 90°-hoek: expliciete UV per paneel, gemeten naden/hoeken/gaten, pixeldichtheid en fit-modi. Zie docs/MEDIA.md.
+- Afbeelding, video (gedeelde texture, frame-synchroon op alle wanden) en procedureel kalibratiepatroon. Mediabestanden blijven sessiegeheugen; project bewaart metadata + SHA-256.
+- Hoekcanvas-demo (Nieuw / demo) en examples/corner-canvas-demo.json. 12 nieuwe tests (93 totaal).
+- Eerste echte browserobservatie (ingebouwde browser, WebGL): Immersief-preset, kalibratiepatroon over de hoek, geüploade afbeelding met 'passend', gegenereerde webm-video die frames doorloopt.
 
 ## Bewijs
 
@@ -43,9 +50,9 @@ Editor: http://localhost:4173. API: 8787. Productie: `npm run build` en `npm sta
 
 ## Vervolg naar volledige specificatie
 
-1. Echte browseracceptatie van docs/MANUAL_QA.md en geobserveerde fouten herstellen.
+1. Volledige browseracceptatie van docs/MANUAL_QA.md en geobserveerde fouten herstellen.
 2. Catalogusadapters, gedeelde assembly-definities, socket-editor en magnetische sleep-snapping.
-3. Media-intake, UV/corner canvas, video en read-only WebXR.
+3. Read-only WebXR met teleport; media-export in projectpakket; schermafbeelding-/regressielus.
 4. Blender-renderqueue, GLB-import/assetpackage en exportverfijning.
 5. Modelroutering/kennisdistillatie en volledige referentieacceptatie.
 

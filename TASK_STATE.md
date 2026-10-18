@@ -17,7 +17,7 @@ De browseromgeving blokkeerde observatie via het URL-beveiligingsbeleid. Daarom 
 - Repository was leeg en is openbaar. Michel selecteerde deze expliciet nadat de zichtbaarheid was gemeld.
 - Main bevat alleen de oorspronkelijke initialisatie-README; niet mergen of force-pushen.
 - `Aluvision-3D-tool` is niet gewijzigd.
-- Lokale broncommit voor de eerste versie: `e4e0aa7`. De shell-push had geen HTTPS-aanmeldgegevens; overdracht wordt via de gekoppelde GitHub-API gedaan. De uiteindelijke remote commit staat in de branchgeschiedenis en wordt in de overdracht bevestigd.
+- Broncheckpoint succesvol naar de remote branch geschreven via de gekoppelde GitHub-API: `ee4668f5ce6e0bbb0b4a2ae73febcc768967f734`. De branchupdate is door GitHub bevestigd. De shell-push had geen HTTPS-aanmeldgegevens. Eventuele latere commits werken alleen dit overdrachtsverslag bij; de actuele branchgeschiedenis is leidend.
 
 ## Hervatten op laptop
 

@@ -369,9 +369,19 @@ export function technicalPdf(p: Project, screenshot?: string) {
     `Posities en maten komen uit revisie ${p.updatedAt}.`,
     ...errors.slice(0, 12).map((e) => ascii(e.message)),
   ];
+  // Break before the footer rule at 187 mm. Twelve wrapped error messages
+  // used to push y past 220 on a 210 mm sheet and run off the page.
+  const bottom = 175;
   let y = 49;
   for (const line of lines) {
     const wrapped = pdf.splitTextToSize(ascii(line), 255);
+    if (y + wrapped.length * 5 > bottom) {
+      pdf.addPage();
+      header("Ontwerpcontrole en aannames (vervolg)");
+      pdf.setFontSize(10);
+      pdf.setTextColor(70, 95, 82);
+      y = 49;
+    }
     pdf.text(wrapped, margin, y);
     y += wrapped.length * 5 + 4;
   }

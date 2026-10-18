@@ -19,18 +19,22 @@ export function useProjectServer(
   useEffect(() => {
     connection.setCurrent(project);
   }, [connection, project]);
+  // Both timers also run in "offline" so a transient failure can heal itself.
+  // Gating them on "connected" alone meant error() permanently stopped the
+  // heartbeat and autosave, and nothing ever set the mode back.
+  const live = state.mode === "connected" || state.mode === "offline";
   useEffect(() => {
-    if (state.mode !== "connected") return;
+    if (!live) return;
     const timer = setInterval(() => connection.heartbeat(), 10000);
     return () => clearInterval(timer);
-  }, [connection, state.mode]);
+  }, [connection, live]);
   useEffect(() => {
-    if (state.mode !== "connected" || !state.dirty || state.saving) return;
+    if (!live || !state.dirty || state.saving) return;
     const timer = setTimeout(() => {
       connection.save().catch(() => {});
     }, 1200);
     return () => clearTimeout(timer);
-  }, [connection, state.mode, state.dirty, state.saving, project]);
+  }, [connection, live, state.dirty, state.saving, project]);
   useEffect(
     () => () => {
       connection.disconnect();

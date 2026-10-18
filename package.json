@@ -1,16 +1,21 @@
 {
   "name": "boormester-immersive-studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 4173",
+    "dev": "node scripts/dev.mjs",
     "build": "tsc -b && vite build",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "check": "tsc -b",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "format": "prettier --write src tests",
-    "format:check": "prettier --check src tests"
+    "format": "prettier --write src server scripts tests vite.config.ts",
+    "format:check": "prettier --check src server scripts tests vite.config.ts",
+    "dev:env": "node --env-file=.env scripts/dev.mjs",
+    "dev:web": "vite --host 127.0.0.1 --port 4173",
+    "server": "node --experimental-strip-types server/index.ts",
+    "start": "node --experimental-strip-types server/index.ts",
+    "start:env": "node --env-file=.env --experimental-strip-types server/index.ts"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
@@ -21,6 +26,7 @@
     "three": "^0.186.0"
   },
   "devDependencies": {
+    "@types/node": "^24.19.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/three": "^0.183.0",

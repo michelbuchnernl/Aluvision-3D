@@ -12,6 +12,8 @@ import {
   isVisible,
   MATERIALS,
   validate,
+  inEditContext,
+  selectionUnits,
 } from "./model";
 import type { Project, Vec3, View, Preset, CameraBookmark } from "./model";
 export type Tool = "select" | "move" | "rotate";
@@ -29,6 +31,8 @@ interface Props {
   preset: Preset;
   snap: number;
   freeHeight: boolean;
+  contextId: string|null;
+  onEnterGroup:(objectId:string)=>void;
   onSelect: (ids: string[], add: boolean) => void;
   onTransform: (
     changes: { id: string; position: Vec3; rotation: number }[],
@@ -300,8 +304,9 @@ export default function Viewport(props: Props) {
         dy = e.clientY - from.y;
       if (Math.hypot(dx, dy) > 8 && latest.current.tool === "select") {
         const screenBoxes: ScreenBounds[] = [];
-        objects.forEach((g, id) => {
-          const b = new THREE.Box3().setFromObject(g);
+        const units=selectionUnits(latest.current.project,latest.current.contextId);
+        units.forEach(unit=>{
+          const b=new THREE.Box3();for(const id of unit.objectIds){const g=objects.get(id);if(g)b.expandByObject(g);}if(b.isEmpty())return;const id=unit.id;
           const pts = [];
           for (const x of [b.min.x, b.max.x])
             for (const y of [b.min.y, b.max.y])
@@ -332,7 +337,7 @@ export default function Viewport(props: Props) {
           { x: from.x - r.left, y: from.y - r.top },
           { x: e.clientX - r.left, y: e.clientY - r.top },
         );
-        latest.current.onSelect(ids, from.shift);
+        latest.current.onSelect(units.filter(unit=>ids.includes(unit.id)).flatMap(unit=>unit.objectIds), from.shift);
         return;
       }
       if (Math.hypot(dx, dy) > 8) return;
@@ -343,16 +348,14 @@ export default function Viewport(props: Props) {
         ),
         camera,
       );
-      const hits = raycaster.intersectObjects([...objects.values()], true);
+      const hits = raycaster.intersectObjects([...objects.values()].filter(g=>inEditContext(latest.current.project,g.userData.instance,latest.current.contextId)), true);
       let g: THREE.Object3D | undefined = hits[0]?.object;
       while (g && !g.userData.instance) g = g.parent ?? undefined;
       let ids = g ? [g.userData.instance.id] : [];
-      if (ids.length && g!.userData.instance.groupId)
-        ids = latest.current.project.objects
-          .filter((o) => o.groupId === g!.userData.instance.groupId)
-          .map((o) => o.id);
       latest.current.onSelect(ids, from.shift);
     };
+    const doubleClick=(event:MouseEvent)=>{if(active)return;const r=el.getBoundingClientRect();raycaster.setFromCamera(new THREE.Vector2((event.clientX-r.left)/r.width*2-1,-(event.clientY-r.top)/r.height*2+1),camera);const hits=raycaster.intersectObjects([...objects.values()].filter(g=>inEditContext(latest.current.project,g.userData.instance,latest.current.contextId)),true);let target:THREE.Object3D|undefined=hits[0]?.object;while(target&&!target.userData.instance)target=target.parent??undefined;if(target)latest.current.onEnterGroup(target.userData.instance.id);};
+    renderer.domElement.addEventListener('dblclick',doubleClick);
     renderer.domElement.addEventListener("pointerdown", pointerDown);
     renderer.domElement.addEventListener("pointermove", pointerMove);
     window.addEventListener("pointerup", pointerUp);
@@ -382,6 +385,7 @@ export default function Viewport(props: Props) {
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      renderer.domElement.removeEventListener('dblclick',doubleClick);
       window.removeEventListener("pointerup", pointerUp);
       controls.dispose();
       transform.dispose();
@@ -514,6 +518,7 @@ export default function Viewport(props: Props) {
       g.position.copy(v(o.position));
       g.rotation.y = (o.rotation * Math.PI) / 180;
       g.userData.instance = o;
+      if(!inEditContext(p,o,props.contextId)){const materials=new Set<THREE.Material>();g.traverse((child:any)=>{if(child.isMesh){child.castShadow=false;(Array.isArray(child.material)?child.material:[child.material]).forEach((m:THREE.Material)=>materials.add(m));}});materials.forEach(m=>{m.transparent=true;m.opacity*=.18;m.depthWrite=false;});}
       content.add(g);
       objects.set(o.id, g);
       if (errorIds.has(o.id)) {
@@ -534,7 +539,7 @@ export default function Viewport(props: Props) {
     const movable = props.selected
       .map((id) => objects.get(id))
       .filter((g: any) => g && !isLocked(p, g.userData.instance));
-    if (movable.length && props.tool !== "select") {
+    if (movable.length && props.tool !== "select" && !p.objects.some(o=>props.selected.includes(o.id)&&isLocked(p,o))) {
       const centre = new THREE.Vector3();
       movable.forEach((g: any) => centre.add(g.position));
       centre.divideScalar(movable.length);
@@ -555,6 +560,7 @@ export default function Viewport(props: Props) {
     props.preset,
     props.snap,
     props.freeHeight,
+    props.contextId,
   ]);
   useEffect(() => {
     runtime.current?.setView(props.view);

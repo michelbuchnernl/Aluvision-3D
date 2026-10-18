@@ -1,42 +1,45 @@
-# Huidige bouwstatus
+# Huidige bouwstatus — actief checkpoint
 
-Gestart: 2026-10-18 14:15:27 UTC (16:15 Europe/Berlin).
+Laatste actieve ronde gestart: 2026-10-18 15:12 UTC. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen.
 
-## Huidig resultaat
+## Nieuwe code sinds versie 0.1
 
-Eerste handmatige editor gebouwd, met 36-delige 4 × 8 × 3 m demo, shared/unique definities, cm-transformeren, layers/locks, platte groepen, undo/redo, lokale autosave/herstelpunten, JSON, echte XLSX en technische PDF.
+- Node 24/SQLite-server met projecten, onveranderlijke revisies, herstellen als nieuwe revisie, per-tab bewerkingsleases en revisieconflicten.
+- Afgeschermde lokale HTTP-API met sessie/CSRF, origin/hostcontrole en optionele toegangscode voor private netwerkconfiguratie.
+- Seriële editor-opslagqueue, conflict/herstelstatus en serverprojecten-/revisiepaneel.
+- Server-side Claude-adapter met actuele modellijstcontrole, tokenraming, gesnapshotte officiële prijzen, atomair projectbudget en expliciet beoordeelde scènevoorstellen.
+- Geen echte provider-calls uitgevoerd: Claude-antwoorden zijn in tests nagebootst; er is geen API-geld besteed.
+- Voorstellen worden deterministisch gevalideerd, kunnen apart in de scène worden bekeken en vragen bij ruimtewijzigingen expliciete goedkeuring. Verouderde voorstellen overschrijven geen nieuwe wijzigingen.
+- Project-LOG en CONTEXT worden uit SQLite afgeleid; onbekend providerverbruik houdt de reservering vast tot expliciete reconciliatie.
+- Geneste groepen, hiërarchische locks/zichtbaarheid, bewerkingscontext en een objectboom worden nu toegevoegd en gecontroleerd. Shared component definitions blijven afzonderlijk van instances; gedeelde geneste assembly-definities zijn nog toekomstwerk.
 
-33 geautomatiseerde tests slagen. TypeScript en productie-build slagen. Productie-audit: 0 gemelde kwetsbaarheden. Exportdata en gegenereerde fysieke mesh-enveloppen zijn getest. PDF-proefpagina's zijn gerenderd en bekeken.
+## Bewijs tot dit checkpoint
 
-De browseromgeving blokkeerde observatie via het URL-beveiligingsbeleid. Daarom is geen browseracceptatie geslaagd en is de zichtbare 3D/editorbediening nog niet empirisch bevestigd. Geen claim dat het volledige product gereed is.
+De bestaande 60 tests slaagden, inclusief het volledige traject editorclient → echte HTTP-server → nagebootste Claude → voorstel → revisie. De afzonderlijke CLI-start/herstarttest slaagde en controleert ook een tweede serverproces op dezelfde datamap. Nieuwe hiërarchietests worden in deze ronde toegevoegd. TypeScript-controle en builds draaien tijdens de bouw.
 
-## GitHub
+Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen visuele of iPhone/Safari-acceptatie geclaimd.
 
-- Bestemming: https://github.com/michelbuchnernl/Aluvision-3D
-- Branch: `sol/aluvision-prototype`
-- Repository was leeg en is openbaar. Michel selecteerde deze expliciet nadat de zichtbaarheid was gemeld.
-- Main bevat alleen de oorspronkelijke initialisatie-README; niet mergen of force-pushen.
-- `Aluvision-3D-tool` is niet gewijzigd.
-- Broncheckpoint succesvol naar de remote branch geschreven via de gekoppelde GitHub-API: `ee4668f5ce6e0bbb0b4a2ae73febcc768967f734`. De branchupdate is door GitHub bevestigd. De shell-push had geen HTTPS-aanmeldgegevens. Eventuele latere commits werken alleen dit overdrachtsverslag bij; de actuele branchgeschiedenis is leidend.
+## Bestemming en hervatten
 
-## Hervatten op laptop
+Repository: https://github.com/michelbuchnernl/Aluvision-3D
+Branch: `sol/aluvision-prototype`
+Claude's `Aluvision-3D-tool` wordt niet gewijzigd. Geen force-push, merge of publieke webdeployment.
 
 ```bash
-git clone --branch sol/aluvision-prototype https://github.com/michelbuchnernl/Aluvision-3D.git
-cd Aluvision-3D
+git fetch origin
+git switch sol/aluvision-prototype
+git pull --ff-only
 npm ci
-npm test
 npm run dev
 ```
 
-Open http://localhost:4173 op dezelfde laptop. Dit is geen internetpreview. Vereist: Node 24.x. De statische productie-build maak je met `npm run build`.
+`npm run dev` start voortaan de lokale API op 8787 en de Vite-editor op 4173. Claude staat standaard uit. `.env.example` bevat de optionele configuratie; sleutels/data worden door Git genegeerd.
 
-## Exacte vervolginstructie
+## Volgende acties
 
-Lees README.md, DECISIONS.md en TEST_RESULTS.md. Voer eerst docs/MANUAL_QA.md werkelijk in een browser uit. Herstel geobserveerde runtime-/interactiefouten en leg bewijs vast. Begin pas daarna aan backendpersistence met server-lock en een server-side Claude-adapter. Houd de editor zonder API-sleutel bruikbaar. Geen betaalde API-calls zonder autorisatie, geen sleutels in frontend/Git, geen wijzigingen aan Claude's tool-repository.
+1. Rond de hiërarchie-/interactie-integratie en gerichte tests af.
+2. Werk README, REQUIREMENTS, DECISIONS en TEST_RESULTS bij naar het feitelijke resultaat van deze ronde.
+3. Push opnieuw bij het volgende coherente checkpoint en vóór beëindiging van de uitvoerronde.
+4. Browseracceptatie blijft een expliciete open taak; daarna volgen media/UV/WebXR/Blender en catalogusadapters.
 
-REQUIREMENTS.md bevat de rest van het productdoel. Blender, echte leverancierscatalogi, geneste bewerkingscontext, media/UV, WebXR, assetpakketten en AI-kostenbeheer zijn nog niet geïmplementeerd.
-
-## Uitvoering
-
-Er is geen zelfstandige achtergrondtaak gestart. De ontwikkelpreview is gestopt. Werk eindigt na het opslaan van dit checkpoint; voortzetting vereist een nieuwe bouwopdracht of hervatten op de laptop.
+Er is tijdens het afronden van dit checkpoint een actieve bouwtaak in dit gesprek. Dit bestand belooft geen zelfstandig achtergrondproces nadat de beurt is beëindigd.

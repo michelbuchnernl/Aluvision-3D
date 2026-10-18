@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Box,
+  Database,
   Layers,
   Search,
   Plus,
@@ -62,6 +63,11 @@ import {
   duplicate,
   makeUnique,
   group,
+  ungroup,
+  groupPath,
+  groupObjectIds,
+  selectionAtLevel,
+  childGroupForObject,
   removeObjects,
   bom,
   bomCsv,
@@ -72,6 +78,9 @@ import {
   redo,
 } from "./model";
 import type { Project, History, View, Preset, Vec3, MaterialId } from "./model";
+import {useProjectServer} from "./useProjectServer";
+import {SceneTree} from "./SceneTree";
+import {ServerPanel,AiPanel} from "./ServerPanels";
 import "./styles.css";
 const STORAGE = "boormester-studio-v1",
   VERSIONS = STORAGE + "-versions",
@@ -242,6 +251,7 @@ function App() {
   const p = h.present;
   const pRef = useRef(p);
   pRef.current = p;
+  const [editGroupId,setEditGroupId]=useState<string|null>(null);
   const [selected, setSelected] = useState<string[]>([]),
     [tool, setTool] = useState<Tool>("select"),
     [view, setView] = useState<View>("perspective"),
@@ -255,7 +265,7 @@ function App() {
       () => window.innerWidth > 1100,
     );
   const [modal, setModal] = useState<
-      null | "help" | "bom" | "room" | "versions" | "new"
+      null | "help" | "bom" | "room" | "versions" | "new" | "server" | "ai"
     >(null),
     [toast, setToast] = useState(""),
     [saved, setSaved] = useState(true),
@@ -265,13 +275,21 @@ function App() {
     [materialScope, setMaterialScope] = useState<"instance" | "definition">(
       "instance",
     ),
-    [readOnly, setReadOnly] = useState(false),
+    [localReadOnly, setReadOnly] = useState(false),
     [exportMenu, setExportMenu] = useState(false),
     [exportBusy, setExportBusy] = useState(false);
   const api = useRef<ViewportApi | null>(null),
     file = useRef<HTMLInputElement>(null),
     owner = useRef(uid());
   const [versions, setVersions] = useState<Version[]>(loadVersions);
+  const [previewProject,setPreviewProject]=useState<Project|null>(null),[previewJobId,setPreviewJobId]=useState<string|null>(null);
+  const server=useProjectServer(p,(next)=>{
+    try{const backup=[{time:new Date().toISOString(),project:clone(pRef.current)},...loadVersions()].slice(0,10);localStorage.setItem(VERSIONS,JSON.stringify(backup));setVersions(backup);}catch{}
+    setH(previous=>commit(previous,next));setSelected([]);setEditGroupId(null);setPreviewProject(null);
+  });
+  const serverReadOnly=['locked','conflict','connecting'].includes(server.state.mode);
+  const readOnly=localReadOnly||serverReadOnly||!!previewProject;
+
   const announce = (m: string) => setToast(m);
   useEffect(() => {
     if (!toast) return;
@@ -279,6 +297,7 @@ function App() {
     return () => clearTimeout(id);
   }, [toast]);
   useEffect(() => {
+    if(server.state.projectId){setReadOnly(false);return;}
     const heartbeat = () => {
       try {
         const lease = JSON.parse(localStorage.getItem(LEASE) ?? "null");
@@ -316,9 +335,9 @@ function App() {
         if (l?.owner === owner.current) localStorage.removeItem(LEASE);
       } catch {}
     };
-  }, []);
+  }, [server.state.projectId]);
   useEffect(() => {
-    if (readOnly) return;
+    if (localReadOnly) return;
     setSaved(false);
     const id = setTimeout(() => {
       try {
@@ -332,7 +351,7 @@ function App() {
       }
     }, 500);
     return () => clearTimeout(id);
-  }, [p, readOnly]);
+  }, [p, localReadOnly]);
   const change = (next: Project | ((p: Project) => Project)) => {
     if (readOnly) {
       announce("Deze tab is alleen-lezen. Neem eerst de bewerking over.");
@@ -348,7 +367,7 @@ function App() {
   }, [p.objects]);
   useEffect(() => {
     const flush = () => {
-      if (!readOnly) {
+      if (!localReadOnly) {
         try {
           localStorage.setItem(STORAGE, serialize(pRef.current));
         } catch {}
@@ -363,12 +382,15 @@ function App() {
       window.removeEventListener("beforeunload", flush);
       document.removeEventListener("visibilitychange", visibility);
     };
-  }, [readOnly]);
-  const pick = (ids: string[], add = false) =>
-    setSelected((prev) => (add ? [...new Set([...prev, ...ids])] : ids));
+  }, [localReadOnly]);
+  useEffect(()=>{if(editGroupId&&!p.groups.some(g=>g.id===editGroupId)){setEditGroupId(null);setSelected([]);}},[p.groups,editGroupId]);
+  const enterContext=(id:string|null)=>{setEditGroupId(id);setSelected([]);setTool('select');};
+  const pick=(ids:string[],add=false)=>{const resolved=selectionAtLevel(p,ids,editGroupId);setSelected(previous=>add?[...new Set([...previous,...resolved])]:resolved);};
   const selectedObjects = p.objects.filter((o) => selected.includes(o.id)),
     one = selectedObjects.length === 1 ? selectedObjects[0] : undefined,
     def = one ? definition(p, one) : undefined;
+  const selectionLocked=selectedObjects.some(o=>isLocked(p,o));
+  const selectedGroup=p.groups.find(g=>(g.parentId??null)===editGroupId&&groupObjectIds(p,g.id).length===selected.length&&selected.length>0&&groupObjectIds(p,g.id).every(id=>selected.includes(id)));
   const issues = [...validate(p), ...collisionWarnings(p)],
     errors = issues.filter((i) => i.severity === "error");
   const snapshot = (label = "Versie opgeslagen") => {
@@ -388,11 +410,13 @@ function App() {
     }
   };
   const duplicateSelection = () => {
-    const result = duplicate(pRef.current, selected);
+    if(pRef.current.objects.some(o=>selected.includes(o.id)&&isLocked(pRef.current,o))){announce('Selectie bevat vergrendelde onderdelen.');return;}
+    const result = duplicate(pRef.current, selected,editGroupId);
     change(result.project);
     setSelected(result.ids);
   };
   const deleteSelection = () => {
+    if(pRef.current.objects.some(o=>selected.includes(o.id)&&isLocked(pRef.current,o))){announce('Selectie bevat vergrendelde onderdelen.');return;}
     change((q) => removeObjects(q, selected));
     setSelected([]);
   };
@@ -419,6 +443,7 @@ function App() {
     change,
     snapshot,
     modal,
+    editGroupId,
   };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -429,6 +454,7 @@ function App() {
       )
         return;
       if (e.key === "Escape") {
+        if(!actions.current.modal&&actions.current.editGroupId){const parent=pRef.current.groups.find(g=>g.id===actions.current.editGroupId)?.parentId??null;setEditGroupId(parent);}
         setModal(null);
         setExportMenu(false);
         setSelected([]);
@@ -514,6 +540,7 @@ function App() {
     }
   };
   const exportPdf = async () => {
+    if(previewProject){announce("Sluit eerst de voorstelweergave voordat je het ontwerp exporteert.");return;}
     setExportMenu(false);
     setExportBusy(true);
     announce("Technische PDF maken…");
@@ -562,7 +589,7 @@ function App() {
             onCommit={(name) => change((q) => ({ ...q, name }))}
           />
           <span>
-            {storageError ? (
+            {server.state.projectId ? (<><Database size={11}/>{server.state.mode==='connected'?(server.state.saving?'Op server bewaren…':`Serverrevisie ${server.state.revision}${server.state.dirty?' · gewijzigd':''}`):server.state.mode==='locked'?'Serververgrendeling verloren':server.state.mode==='conflict'?'Serverconflict · lokale kopie bewaard':'Serververbinding onderbroken'}</>) : storageError ? (
               <>
                 <AlertTriangle size={11} /> Opslag niet beschikbaar
               </>
@@ -578,6 +605,9 @@ function App() {
           </span>
         </div>
         <div className="header-actions">
+          <button className="button subtle server-header-button" aria-label="Serverprojecten" onClick={()=>setModal('server')}><Database size={16}/><span>Server{server.state.revision?` · ${server.state.revision}`:''}</span></button>
+          <button className="button subtle ai-header-button" aria-label="Ontwerpen met Claude" onClick={()=>setModal('ai')}><Sparkles size={16}/><span>Claude</span></button>
+
           <button
             className="button subtle desktop-label"
             onClick={() => setModal("versions")}
@@ -595,7 +625,7 @@ function App() {
           </button>
           <button
             className="button subtle"
-            onClick={() => snapshot()}
+            onClick={() => {snapshot();if(server.state.mode==='connected')server.connection.save('Handmatig bewaard').catch(e=>announce(e.message));}}
             disabled={readOnly}
           >
             <Save size={16} />
@@ -661,11 +691,7 @@ function App() {
           >
             <Menu size={17} />
           </IconButton>
-          <div className="breadcrumb">
-            Projecten <ChevronRight size={12} />
-            <span>Immersieve ruimte</span>
-            <span className="draft-tag">CONCEPT</span>
-          </div>
+          <div className="breadcrumb context-breadcrumb"><button onClick={()=>enterContext(null)}>Ruimte</button>{groupPath(p,editGroupId??undefined).map(g=><React.Fragment key={g.id}><ChevronRight size={12}/><button className={g.id===editGroupId?'current':''} onClick={()=>enterContext(g.id)}>{g.name}</button></React.Fragment>)}{editGroupId?<span className="context-editing-label">GROEP BEWERKEN</span>:<span className="draft-tag">CONCEPT</span>}</div>
         </div>
         <div className="toolbar-right">
           <button className="room-summary" onClick={() => setModal("room")}>
@@ -683,13 +709,13 @@ function App() {
           </IconButton>
         </div>
       </div>
-      {(readOnly || storageError) && (
+      {(localReadOnly || storageError) && (
         <div className="notice">
           <AlertTriangle size={16} />
-          {readOnly
+          {localReadOnly
             ? "Een andere tab bewerkt dit lokale project. Deze tab is alleen-lezen."
             : storageError}
-          {readOnly && (
+          {localReadOnly && (
             <button
               onClick={() => {
                 try {
@@ -722,6 +748,8 @@ function App() {
           )}
         </div>
       )}
+      {serverReadOnly&&<div className="notice"><Database size={15}/>{server.state.message}<button onClick={()=>setModal('server')}>Bekijk serverstatus</button></div>}
+      {previewProject&&<div className="proposal-preview-bar"><Eye size={15}/><span>Voorstelweergave · nog niet toegepast</span><button onClick={()=>setPreviewProject(null)}>Terug naar ontwerp</button><button onClick={()=>setModal('ai')}>Voorstel beoordelen</button></div>}
       <main
         className={
           "workspace " +
@@ -781,6 +809,7 @@ function App() {
                       disabled={readOnly}
                       onClick={() => {
                         const o = newInstance(p, d.id);
+                        if(editGroupId)o.groupId=editGroupId;
                         change((q) => ({ ...q, objects: [...q.objects, o] }));
                         setSelected([o.id]);
                         setTool("move");
@@ -823,60 +852,7 @@ function App() {
                 <div className="section-heading">
                   SCÈNE <span>{p.objects.length} exemplaren</span>
                 </div>
-                <div className="objects-list">
-                  {p.objects
-                    .filter((o) =>
-                      o.name.toLowerCase().includes(search.toLowerCase()),
-                    )
-                    .map((o) => (
-                      <div
-                        key={o.id}
-                        className={
-                          "object-row " +
-                          (selected.includes(o.id) ? "selected" : "")
-                        }
-                      >
-                        <button
-                          className="object-name"
-                          onClick={(e) => pick([o.id], e.shiftKey)}
-                        >
-                          <Box size={14} />
-                          <span>{o.name}</span>
-                          {o.groupId && <Group size={12} />}
-                        </button>
-                        <button
-                          aria-label={`Zichtbaarheid ${o.name}`}
-                          onClick={() =>
-                            change((q) => {
-                              const n = clone(q),
-                                t = n.objects.find((v) => v.id === o.id)!;
-                              t.visible = !t.visible;
-                              return n;
-                            })
-                          }
-                        >
-                          {o.visible ? <Eye size={13} /> : <EyeOff size={13} />}
-                        </button>
-                        <button
-                          aria-label={`Vergrendeling ${o.name}`}
-                          onClick={() =>
-                            change((q) => {
-                              const n = clone(q),
-                                t = n.objects.find((v) => v.id === o.id)!;
-                              t.locked = !t.locked;
-                              return n;
-                            })
-                          }
-                        >
-                          {isLocked(p, o) ? (
-                            <LockKeyhole size={13} />
-                          ) : (
-                            <LockKeyholeOpen size={13} />
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                </div>
+                <SceneTree project={p} selected={selected} contextId={editGroupId} search={search} readOnly={readOnly} onChange={change} onEnter={id=>enterContext(id)} onPick={(ids,add,context)=>{if(context!==editGroupId){setEditGroupId(context);setSelected(ids);}else setSelected(previous=>add?[...new Set([...previous,...ids])]:ids);}}/>
               </>
             )}
             <div className="tags-panel">
@@ -920,14 +896,16 @@ function App() {
         )}
         <section className={"canvas-area " + preset} aria-label="Ontwerpruimte">
           <Viewport
-            project={p}
-            selected={selected}
+            project={previewProject??p}
+            selected={previewProject?[]:selected}
             tool={readOnly ? "select" : tool}
             view={view}
             preset={preset}
             snap={snap}
             freeHeight={freeHeight}
-            onSelect={pick}
+            contextId={previewProject?null:editGroupId}
+            onEnterGroup={id=>{if(previewProject)return;const next=childGroupForObject(p,id,editGroupId);if(next)enterContext(next);}}
+            onSelect={previewProject?()=>{}:pick}
             onTransform={(changes) =>
               change((q) =>
                 editObjects(
@@ -998,14 +976,14 @@ function App() {
             <span />
             <IconButton
               title="Dupliceren (Ctrl/Cmd+D)"
-              disabled={!selected.length || readOnly}
+              disabled={!selected.length || readOnly || selectionLocked}
               onClick={duplicateSelection}
             >
               <Copy size={18} />
             </IconButton>
             <IconButton
               title="Verwijderen (Delete)"
-              disabled={!selected.length || readOnly}
+              disabled={!selected.length || readOnly || selectionLocked}
               onClick={deleteSelection}
             >
               <Trash2 size={18} />
@@ -1120,11 +1098,11 @@ function App() {
                     </p>
                   </div>
                   {selected.length > 1 && (
-                    <div className="multi-actions">
+                    <div className="multi-actions">{selectedGroup&&<div className="selected-group-editor"><TextInput label="Groepsnaam" value={selectedGroup.name} disabled={readOnly||selectionLocked} onCommit={name=>change(q=>{const n=clone(q);n.groups.find(g=>g.id===selectedGroup.id)!.name=name;return n;})}/><button className="button" onClick={()=>enterContext(selectedGroup.id)}>Bewerk groep</button></div>}
                       <button
                         className="button"
                         disabled={readOnly}
-                        onClick={() => change((q) => group(q, selected))}
+                        onClick={() => change((q) => group(q, selected,editGroupId))}
                       >
                         <Group size={15} />
                         Groepeer selectie
@@ -1577,11 +1555,11 @@ function App() {
       {modal && (
         <div className="modal-overlay" onClick={() => setModal(null)}>
           <section
-            className={"modal " + (modal === "bom" ? "wide" : "")}
+            className={"modal " + (modal === "bom" || modal==='server' || modal==='ai' ? "wide" : "")}
             role="dialog"
             aria-modal="true"
             aria-label={
-              modal === "bom"
+              modal==='server'?'Serverprojecten en revisies':modal==='ai'?'Ontwerpen met Claude':modal === "bom"
                 ? "Onderdelenlijst"
                 : modal === "room"
                   ? "Ruimteafmetingen"
@@ -1600,6 +1578,8 @@ function App() {
             >
               <X size={20} />
             </button>
+            {modal==='server'&&<ServerPanel connection={server.connection} state={server.state}/>}
+            {modal==='ai'&&<AiPanel connection={server.connection} state={server.state} focusJobId={previewJobId} onPreview={(project,id)=>{setPreviewProject(project);setPreviewJobId(id);setModal(null);}}/>}
             {modal === "help" && (
               <>
                 <span className="eyebrow">BOORMESTER STUDIO · PROTOTYPE</span>

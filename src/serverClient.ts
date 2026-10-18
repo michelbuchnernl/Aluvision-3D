@@ -287,7 +287,10 @@ export class ProjectConnection {
     return document;
   }
   async createCurrent(copy = false) {
-    await this.queue;
+    // Drain, don't inherit: this.queue holds the last save's promise, so a
+    // rejected background save would otherwise reject this call with the
+    // previous error before it does anything.
+    await this.settled();
     const original = this.current;
     const project = clone(original);
     if (copy) {
@@ -321,7 +324,7 @@ export class ProjectConnection {
   }
   async open(id: string, takeover = false) {
     if (this.state.mode === "connected" && this.state.dirty) await this.flush();
-    await this.queue;
+    await this.settled();
     await this.disconnect();
     this.update({ mode: "connecting", message: "Serverproject openen…" });
     try {
@@ -366,8 +369,14 @@ export class ProjectConnection {
         .catch(() => {});
     return Promise.resolve();
   }
+  /** Modes that still hold a project and may recover on their own. */
+  live() {
+    return this.state.mode === "connected" || this.state.mode === "offline";
+  }
   async heartbeat() {
-    if (this.state.mode !== "connected" || !this.state.projectId) return;
+    // Runs in "offline" too. It used to stop there, so one transient failure
+    // let the 30s server lease expire and the session never came back.
+    if (!this.live() || !this.state.projectId) return;
     const generation = this.generation;
     try {
       const l = await this.client.request<{ token: string }>(
@@ -375,10 +384,20 @@ export class ProjectConnection {
         "POST",
         {},
       );
-      if (generation === this.generation) this.leaseToken = l.token;
+      if (generation !== this.generation) return;
+      this.leaseToken = l.token;
+      if (this.state.mode === "offline")
+        this.update({ mode: "connected", message: "Server weer bereikbaar." });
     } catch (e) {
       if (generation === this.generation) this.error(e);
     }
+  }
+  /** Waits for the save queue to drain without adopting its rejection. */
+  settled() {
+    return this.queue.then(
+      () => {},
+      () => {},
+    );
   }
   save(note = "Automatisch bewaard"): Promise<ServerDocument | null> {
     const task = this.queue.catch(() => {}).then(() => this.performSave(note));
@@ -386,11 +405,10 @@ export class ProjectConnection {
     return task;
   }
   async performSave(note: string) {
-    if (
-      this.state.mode !== "connected" ||
-      !this.state.projectId ||
-      this.state.revision === null
-    )
+    // "offline" is a retryable state, not a terminal one: the project, lease
+    // and revision are all still held. "conflict" and "locked" are excluded —
+    // those need the user to resolve them before a save can succeed.
+    if (!this.live() || !this.state.projectId || this.state.revision === null)
       throw Error("Geen actieve serververbinding.");
     const snapshot = clone(this.current);
     if (snapshot.id !== this.state.projectId)
@@ -408,6 +426,9 @@ export class ProjectConnection {
       if (generation !== this.generation) return result;
       this.savedFingerprint = contentFingerprint(result.project);
       this.update({
+        // A successful write proves the connection is back. Without this the
+        // mode set by error() was never cleared by any success path.
+        mode: "connected",
         revision: result.revision,
         saving: false,
         dirty: contentFingerprint(this.current) !== this.savedFingerprint,

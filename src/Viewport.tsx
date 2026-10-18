@@ -519,9 +519,12 @@ export default function Viewport(props: Props) {
     floor.position.y = -0.5;
     floor.receiveShadow = true;
     content.add(floor);
+    // Divisions must be a positive integer; a room under 50 cm on its longest
+    // side would otherwise ask for a fractional count and draw nothing usable.
+    const gridSize = Math.max(p.room.length, p.room.depth) * 2;
     const grid = new THREE.GridHelper(
-      Math.max(p.room.length, p.room.depth) * 2,
-      (Math.max(p.room.length, p.room.depth) * 2) / 100,
+      gridSize,
+      Math.max(1, Math.round(gridSize / 100)),
       dark ? "#46616b" : "#aebcc4",
       dark ? "#2c454f" : "#cbd4d8",
     );

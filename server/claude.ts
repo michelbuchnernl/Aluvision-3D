@@ -89,7 +89,14 @@ export class ClaudeProvider {
         "ai_disabled",
         "Claude staat uit. Configureer ANTHROPIC_API_KEY en STUDIO_ENABLE_AI=1 op de server.",
       );
-    const pricing = MODEL_PRICES[model];
+    // Object.hasOwn, not a truthiness test: MODEL_PRICES inherits from
+    // Object.prototype, so "toString", "constructor", "valueOf" and
+    // "__proto__" all return truthy values and would pass an `if (!pricing)`
+    // check with undefined rates, quoting NaN micros.
+    const pricing =
+      typeof model === "string" && Object.hasOwn(MODEL_PRICES, model)
+        ? MODEL_PRICES[model]
+        : undefined;
     if (!pricing)
       fail(
         400,
@@ -333,6 +340,12 @@ export class ClaudeService {
           true,
         );
       }
+      // Only parsing and previewing belong in this try. settle() used to sit
+      // inside it, so a storage fault was caught, retried on a job that was no
+      // longer 'running', and finally booked as "Claude sent a bad proposal" —
+      // charging the budget for a server-side failure.
+      let preview: ReturnType<typeof previewProposal> | null = null;
+      let message: string;
       try {
         if (
           response.stop_reason !== "tool_use" ||
@@ -347,34 +360,30 @@ export class ClaudeService {
         if (calls.length !== 1 || calls[0].name !== "propose_scene")
           throw Error("Claude gaf een onverwachte toolrespons.");
         // Preview against the quoted snapshot, not a scene that may have changed while generation ran.
-        const base = this.store.revision(job.projectId, job.baseRevision),
-          preview = previewProposal(base, calls[0].input);
-        const settled = this.store.settle(
-          id,
-          cost,
-          response.usage,
-          preview.proposal,
-          preview,
-          { requestId, stopReason: response.stop_reason },
-          preview.canApply
-            ? "Voorstel gereed voor beoordeling."
-            : preview.proposal.questions.length
-              ? "Claude heeft een verduidelijking nodig."
-              : "Voorstel bevat grensfouten of geen toepasbare wijzigingen.",
-        );
-        return this.store.publicJob(settled);
+        const base = this.store.revision(job.projectId, job.baseRevision);
+        preview = previewProposal(base, calls[0].input);
+        message = preview.canApply
+          ? "Voorstel gereed voor beoordeling."
+          : preview.proposal.questions.length
+            ? "Claude heeft een verduidelijking nodig."
+            : "Voorstel bevat grensfouten of geen toepasbare wijzigingen.";
       } catch (e) {
-        const settled = this.store.settle(
-          id,
-          cost,
-          response.usage,
-          null,
-          null,
-          { requestId, stopReason: response.stop_reason },
-          e instanceof Error ? e.message : "Ongeldig voorstel",
-        );
-        return this.store.publicJob(settled);
+        preview = null;
+        message = e instanceof Error ? e.message : "Ongeldig voorstel";
       }
+      // Exactly once, outside the try: if this throws, the outer catch marks
+      // the job uncertain and keeps the reservation, which is the honest
+      // outcome for a request that was billed but could not be recorded.
+      const settled = this.store.settle(
+        id,
+        cost,
+        response.usage,
+        preview?.proposal ?? null,
+        preview,
+        { requestId, stopReason: response.stop_reason },
+        message,
+      );
+      return this.store.publicJob(settled);
     } catch (e) {
       const uncertain = !(e instanceof ProviderError) || e.uncertain;
       return this.store.publicJob(

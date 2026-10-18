@@ -230,7 +230,14 @@ export function definition(p: Project, o: Instance): Definition {
 export function effectiveMaterial(p: Project, o: Instance): MaterialId {
   return o.material ?? definition(p, o).material;
 }
-/** Root-to-leaf group path, bounded to keep malformed hierarchies from looping. */
+/**
+ * Root-to-leaf group path, bounded to keep malformed hierarchies from looping.
+ * A reference to a group that no longer exists resolves to the empty path
+ * rather than throwing: deleting a group's last object prunes the group
+ * (see removeObjects) while UI state may still point at it for one render,
+ * and a throw there takes the whole app down. Import still rejects dangling
+ * parentIds explicitly in parseProject; cycles and runaway depth still throw.
+ */
 export function groupPath(p: Project, groupId?: string): Group[] {
   const result: Group[] = [];
   const seen = new Set<string>();
@@ -240,7 +247,7 @@ export function groupPath(p: Project, groupId?: string): Group[] {
       throw Error("Ongeldige of te diepe groepshiërarchie.");
     seen.add(id);
     const g = p.groups.find((v) => v.id === id);
-    if (!g) throw Error("Groepsverwijzing ontbreekt.");
+    if (!g) return [];
     result.push(g);
     id = g.parentId;
   }
@@ -402,8 +409,20 @@ export function validate(p: Project): Issue[] {
       });
   }
   for (const connection of p.connections ?? []) {
-    const from = p.objects.find((o) => o.id === connection.from.objectId)!;
-    const to = p.objects.find((o) => o.id === connection.to.objectId)!;
+    const from = p.objects.find((o) => o.id === connection.from.objectId);
+    const to = p.objects.find((o) => o.id === connection.to.objectId);
+    // Import guarantees both endpoints exist, but validate() also runs on
+    // in-memory scenes that never passed through parseProject. Report the
+    // dangling link instead of dereferencing undefined.
+    if (!from || !to) {
+      issues.push({
+        id: `connection-${connection.id}`,
+        objectId: from?.id ?? to?.id,
+        severity: "warning",
+        message: `Verbinding ${connection.id} verwijst naar een onderdeel dat niet meer bestaat.`,
+      });
+      continue;
+    }
     const a = worldSocket(definition(p, from), from, connection.from.socketId);
     const b = worldSocket(definition(p, to), to, connection.to.socketId);
     if (
@@ -831,7 +850,14 @@ export function parseProject(raw: string): Project {
     groups: p.groups,
     cameras: p.cameras,
     ...(p.connections !== undefined ? { connections: p.connections } : {}),
-    updatedAt: typeof p.updatedAt === "string" ? p.updatedAt : now(),
+    // Must be a real timestamp: exports feed it to new Date() and slice it
+    // onto every PDF page, so an unparseable string reaches the user as
+    // "Invalid Date" metadata rather than an import error.
+    updatedAt:
+      typeof p.updatedAt === "string" &&
+      Number.isFinite(Date.parse(p.updatedAt))
+        ? p.updatedAt
+        : now(),
   };
 }
 export interface History {

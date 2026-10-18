@@ -29,3 +29,10 @@ Noteer apparaat, browser, testdatum en werkelijk resultaat in TEST_RESULTS.md. H
 20. Stop/start de server, verbind opnieuw en open opgeslagen project en revisiehistorie. Herstellen maakt een nieuwe revisie. Test offline status zonder dat onopgeslagen werk verdwijnt.
 21. Claude zonder key: duidelijke setupstatus, geen inference mogelijk. API-key mag niet in browserstorage, downloads of frontendnetwerkrequests verschijnen.
 22. Alleen bij afzonderlijk geautoriseerde echte provideracceptatie: zet klein budget, vraag raming, voer bewust één aanvraag uit, bekijk preview, verwerp en pas daarna een ander geldig voorstel toe. Test extra akkoord voor ruimtewijziging en afwijzing van stale basis. Leg echte model-ID, usage en kosten vast; fake-provider-tests zijn hiervoor geen vervanging.
+
+## Aanvulling versie 0.3 — nog uitvoeren
+
+23. Druk T of klik het liniaalicoon. Meet twee zichtbare meshpunten en twee vloerpunten; vergelijk 3D-/horizontale afstand en signed ΔX/Y/Z. Voer A=(0,0,0), B=(300,1200,400) in: afstand 1300 cm, horizontaal 500 cm. Derde klik start opnieuw; meten mag geen revisie/undo maken. Test touch afzonderlijk.
+24. Importeer connected-demo-frames.json. Betreed de groep, verplaats één frame: verbindingswaarschuwing. Undo herstelt. Selecteer één frame en kies twee tegenovergestelde demo-vlakken: preview, annuleren en toepassen. Controleer dat alleen toepassen de scène wijzigt.
+25. Selecteer een groep met een verborgen kind: uitlijnen moet alle kinderen rigid verplaatsen. Een locked kind blokkeert de hele selectie. Hoogtewijziging zonder akkoord stopt; buitenruimte-preview kan niet worden toegepast. Bekijk ook waarschuwingen bij het breken van bestaande verbindingen.
+26. Exporteer GLB zichtbaar-only en inclusief verborgen delen. Open in een externe glTF-viewer of Blender, controleer aantallen, groepen, materiaal en de meterschaal. GLB bevat geen raster, meetlijn of vloerlabels. Houd JSON als app-back-up. Leg viewer/versie/resultaat vast.

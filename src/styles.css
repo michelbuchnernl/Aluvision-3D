@@ -2585,3 +2585,130 @@ tfoot td {
 .selected-group-editor + .button {
   font-size: 11px;
 }
+/* Spatial review and temporary measurement tools. */
+.alignment-panel .labeled-select {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.alignment-panel select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: inherit;
+}
+.spatial-error {
+  color: #b74635;
+  background: #fff0e9;
+  padding: 10px;
+  border-radius: 6px;
+}
+.alignment-preview-bar {
+  flex-wrap: wrap;
+}
+.alignment-preview-bar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.measurement-panel {
+  position: absolute;
+  top: 60px;
+  right: 16px;
+  z-index: 12;
+  width: 310px;
+  max-width: calc(100% - 90px);
+  padding: 14px;
+  background: rgba(255, 255, 252, 0.96);
+  color: #26383e;
+  border: 1px solid #d6deda;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px #17312620;
+  font-size: 12px;
+}
+.measurement-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.measurement-panel header strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.measurement-panel p {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+.measurement-point {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+.measurement-point > span {
+  font-weight: 700;
+  width: 14px;
+}
+.measurement-point label {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  min-width: 0;
+}
+.measurement-point input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d6deda;
+  border-radius: 4px;
+  padding: 5px 3px;
+  background: white;
+  color: #26383e;
+  font-size: 11px;
+}
+.measurement-panel output {
+  display: block;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  margin: 12px 0 5px;
+}
+.measurement-panel output small {
+  font-size: 12px;
+  font-weight: 400;
+}
+.measurement-axes {
+  font-size: 11px;
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.connection-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  padding-top: 8px;
+}
+.connection-row span {
+  flex: 1;
+  line-height: 1.4;
+}
+.export-menu .glb-visibility {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  white-space: normal;
+}
+.alignment-warnings {
+  flex-basis: 100%;
+  font-size: 11px;
+}
+.alignment-warnings summary {
+  cursor: pointer;
+}
+.alignment-warnings p {
+  margin: 6px 0;
+}

@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 1,
+  "id": "faf6188a-5159-4929-b349-42c2b389a220",
+  "name": "Demo-uitlijning · twee frames",
+  "units": "cm",
+  "room": {
+    "length": 800,
+    "depth": 400,
+    "height": 300
+  },
+  "definitions": [
+    {
+      "id": "frame-100",
+      "name": "Frame 100 × 250",
+      "kind": "frame",
+      "size": {
+        "x": 100,
+        "y": 250,
+        "z": 5
+      },
+      "material": "aluminium",
+      "source": "synthetic",
+      "catalogId": "DEMO-F100",
+      "sockets": [
+        {
+          "id": "left",
+          "name": "Links",
+          "position": {
+            "x": -0.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "normal": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "profile": "demo-envelope"
+        },
+        {
+          "id": "right",
+          "name": "Rechts",
+          "position": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "normal": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "profile": "demo-envelope"
+        },
+        {
+          "id": "front",
+          "name": "Voor",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0.5
+          },
+          "normal": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "profile": "demo-envelope"
+        },
+        {
+          "id": "back",
+          "name": "Achter",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": -0.5
+          },
+          "normal": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "profile": "demo-envelope"
+        },
+        {
+          "id": "top",
+          "name": "Boven",
+          "position": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "normal": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "profile": "demo-envelope"
+        },
+        {
+          "id": "bottom",
+          "name": "Onder",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "normal": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "profile": "demo-envelope"
+        }
+      ]
+    },
+    {
+      "id": "panel-100",
+      "name": "Projectiepaneel 100 × 250",
+      "kind": "panel",
+      "size": {
+        "x": 100,
+        "y": 250,
+        "z": 4
+      },
+      "material": "fabric",
+      "source": "synthetic",
+      "catalogId": "DEMO-P100"
+    },
+    {
+      "id": "truss-200",
+      "name": "Truss 200",
+      "kind": "truss",
+      "size": {
+        "x": 200,
+        "y": 25,
+        "z": 25
+      },
+      "material": "aluminium",
+      "source": "synthetic",
+      "catalogId": "DEMO-T200"
+    },
+    {
+      "id": "connector-25",
+      "name": "Verbindingsblok 25",
+      "kind": "connector",
+      "size": {
+        "x": 25,
+        "y": 25,
+        "z": 25
+      },
+      "material": "aluminium",
+      "source": "synthetic",
+      "catalogId": "DEMO-C25"
+    },
+    {
+      "id": "door-100",
+      "name": "Open doorgang 100 × 250",
+      "kind": "door",
+      "size": {
+        "x": 100,
+        "y": 250,
+        "z": 8
+      },
+      "material": "black",
+      "source": "synthetic",
+      "catalogId": "DEMO-D100"
+    },
+    {
+      "id": "table-140",
+      "name": "Tafel 140 × 80",
+      "kind": "table",
+      "size": {
+        "x": 140,
+        "y": 75,
+        "z": 80
+      },
+      "material": "wood",
+      "source": "synthetic",
+      "catalogId": "DEMO-TABLE"
+    },
+    {
+      "id": "projector-40",
+      "name": "Projector proxy 40",
+      "kind": "projector",
+      "size": {
+        "x": 40,
+        "y": 18,
+        "z": 30
+      },
+      "material": "white",
+      "source": "synthetic",
+      "catalogId": "DEMO-PROJ"
+    }
+  ],
+  "objects": [
+    {
+      "id": "b74f1dae-c150-4a09-ac88-97476a33e588",
+      "definitionId": "frame-100",
+      "name": "Frame links",
+      "position": {
+        "x": -100,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false,
+      "groupId": "e5c5865c-e2d5-4f32-baf5-16d69ea28437"
+    },
+    {
+      "id": "48fc3d40-175a-49f1-92eb-31263f53c25b",
+      "definitionId": "frame-100",
+      "name": "Frame rechts",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": 0,
+      "tag": "frames",
+      "visible": true,
+      "locked": false,
+      "groupId": "e5c5865c-e2d5-4f32-baf5-16d69ea28437"
+    }
+  ],
+  "tags": [
+    {
+      "id": "frames",
+      "name": "Constructie",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "surfaces",
+      "name": "Projectievlakken",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "furniture",
+      "name": "Inrichting",
+      "visible": true,
+      "locked": false
+    }
+  ],
+  "groups": [
+    {
+      "id": "e5c5865c-e2d5-4f32-baf5-16d69ea28437",
+      "name": "Twee uitgelijnde demo-frames"
+    }
+  ],
+  "cameras": [],
+  "connections": [
+    {
+      "id": "13657f0f-1b0d-46c4-8cae-0cb13c4394ff",
+      "from": {
+        "objectId": "b74f1dae-c150-4a09-ac88-97476a33e588",
+        "socketId": "right"
+      },
+      "to": {
+        "objectId": "48fc3d40-175a-49f1-92eb-31263f53c25b",
+        "socketId": "left"
+      }
+    }
+  ],
+  "updatedAt": "2026-10-18T16:00:42.698Z"
+}

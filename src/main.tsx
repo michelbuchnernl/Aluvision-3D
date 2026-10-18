@@ -29,6 +29,7 @@ import {
   Moon,
   Grid2X2,
   Ruler,
+  Link2,
   Check,
   X,
   HelpCircle,
@@ -80,6 +81,10 @@ import {
 import type { Project, History, View, Preset, Vec3, MaterialId } from "./model";
 import { useProjectServer } from "./useProjectServer";
 import { SceneTree } from "./SceneTree";
+import { AlignmentPanel, MeasurementPanel } from "./SpatialTools";
+import { applyAlignmentPreview, removeConnection } from "./spatial";
+import type { AlignmentPreview } from "./spatial";
+import { saveBytes } from "./download";
 import { ServerPanel, AiPanel } from "./ServerPanels";
 import "./styles.css";
 const STORAGE = "boormester-studio-v1",
@@ -265,7 +270,15 @@ function App() {
       () => window.innerWidth > 1100,
     );
   const [modal, setModal] = useState<
-      null | "help" | "bom" | "room" | "versions" | "new" | "server" | "ai"
+      | null
+      | "help"
+      | "bom"
+      | "room"
+      | "versions"
+      | "new"
+      | "server"
+      | "ai"
+      | "align"
     >(null),
     [toast, setToast] = useState(""),
     [saved, setSaved] = useState(true),
@@ -284,6 +297,11 @@ function App() {
   const [versions, setVersions] = useState<Version[]>(loadVersions);
   const [previewProject, setPreviewProject] = useState<Project | null>(null),
     [previewJobId, setPreviewJobId] = useState<string | null>(null);
+  const [alignmentPreview, setAlignmentPreview] =
+    useState<AlignmentPreview | null>(null);
+  const [measurePoints, setMeasurePoints] = useState<Vec3[]>([]);
+  const [includeHiddenGlb, setIncludeHiddenGlb] = useState(false);
+  const showingPreview = !!previewProject || !!alignmentPreview;
   const server = useProjectServer(p, (next) => {
     try {
       const backup = [
@@ -297,12 +315,18 @@ function App() {
     setSelected([]);
     setEditGroupId(null);
     setPreviewProject(null);
+    setAlignmentPreview(null);
+    setMeasurePoints([]);
   });
   const serverReadOnly = ["locked", "conflict", "connecting"].includes(
     server.state.mode,
   );
-  const readOnly = localReadOnly || serverReadOnly || !!previewProject;
+  const readOnly = localReadOnly || serverReadOnly || showingPreview;
 
+  useEffect(() => {
+    setMeasurePoints([]);
+    setAlignmentPreview(null);
+  }, [p.id]);
   const announce = (m: string) => setToast(m);
   useEffect(() => {
     if (!toast) return;
@@ -518,9 +542,19 @@ function App() {
           setEditGroupId(parent);
         }
         setModal(null);
+        setAlignmentPreview(null);
         setExportMenu(false);
         setSelected([]);
         setTool("select");
+        return;
+      }
+      if (
+        !actions.current.modal &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        e.key.toLowerCase() === "t"
+      ) {
+        setTool("measure");
         return;
       }
       if (readOnly || actions.current.modal) return;
@@ -602,7 +636,7 @@ function App() {
     }
   };
   const exportPdf = async () => {
-    if (previewProject) {
+    if (showingPreview) {
       announce(
         "Sluit eerst de voorstelweergave voordat je het ontwerp exporteert.",
       );
@@ -623,6 +657,44 @@ function App() {
       );
     } finally {
       setExportBusy(false);
+    }
+  };
+  const exportGlb = async () => {
+    if (showingPreview) {
+      announce(
+        "Sluit eerst de voorstelweergave voordat je het ontwerp exporteert.",
+      );
+      return;
+    }
+    setExportMenu(false);
+    setExportBusy(true);
+    try {
+      const { glbBytes } = await import("./glb");
+      saveBytes(
+        "boormester-ontwerp.glb",
+        new Uint8Array(await glbBytes(p, includeHiddenGlb)),
+        "model/gltf-binary",
+      );
+      announce("GLB gedownload · geometrie in meters");
+    } catch (e) {
+      announce(
+        "GLB-export mislukt: " +
+          (e instanceof Error ? e.message : "onbekende fout"),
+      );
+    } finally {
+      setExportBusy(false);
+    }
+  };
+  const applyAlignment = () => {
+    if (!alignmentPreview || localReadOnly || serverReadOnly) return;
+    try {
+      const next = applyAlignmentPreview(pRef.current, alignmentPreview);
+      setH((previous) => commit(previous, next));
+      setAlignmentPreview(null);
+      setMeasurePoints([]);
+      announce("Uitlijning toegepast");
+    } catch (e) {
+      announce(e instanceof Error ? e.message : "Uitlijnen mislukt.");
     }
   };
   const savedCamera = () => {
@@ -766,6 +838,20 @@ function App() {
                     <small>XLSX · inclusief alle exemplaren</small>
                   </span>
                 </button>
+                <button disabled={showingPreview} onClick={exportGlb}>
+                  <Box size={15} />
+                  <span>
+                    3D-model<small>GLB · meters · demo-geometrie</small>
+                  </span>
+                </button>
+                <label className="glb-visibility">
+                  <input
+                    type="checkbox"
+                    checked={includeHiddenGlb}
+                    onChange={(e) => setIncludeHiddenGlb(e.target.checked)}
+                  />
+                  GLB inclusief verborgen onderdelen
+                </label>
                 <button onClick={exportPdf}>
                   <Ruler size={15} />
                   <span>
@@ -885,6 +971,58 @@ function App() {
             Terug naar ontwerp
           </button>
           <button onClick={() => setModal("ai")}>Voorstel beoordelen</button>
+        </div>
+      )}
+      {alignmentPreview && (
+        <div className="proposal-preview-bar alignment-preview-bar">
+          <Link2 size={15} />
+          <span>
+            Uitlijnpreview · ΔX {alignmentPreview.translation.x.toFixed(1)} / ΔY{" "}
+            {alignmentPreview.translation.y.toFixed(1)} / ΔZ{" "}
+            {alignmentPreview.translation.z.toFixed(1)} cm ·{" "}
+            {alignmentPreview.rotation.toFixed(1)}°
+            {!alignmentPreview.canApply && " · PAST NIET IN RUIMTE"}
+            {alignmentPreview.issues.filter((i) => i.severity === "warning")
+              .length > 0 &&
+              ` · ${alignmentPreview.issues.filter((i) => i.severity === "warning").length} waarschuwingen`}
+          </span>
+          <button
+            onClick={() => {
+              setAlignmentPreview(null);
+              setModal("align");
+            }}
+          >
+            Aanpassen
+          </button>
+          <button onClick={() => setAlignmentPreview(null)}>Annuleren</button>
+          <button
+            disabled={
+              !alignmentPreview.canApply || localReadOnly || serverReadOnly
+            }
+            onClick={applyAlignment}
+          >
+            Toepassen
+          </button>
+          {alignmentPreview.issues.some((i) => i.severity === "warning") && (
+            <details className="alignment-warnings">
+              <summary>Waarschuwingen bekijken</summary>
+              {alignmentPreview.issues
+                .filter((i) => i.severity === "warning")
+                .slice(0, 10)
+                .map((i) => (
+                  <p key={i.id}>{i.message}</p>
+                ))}
+            </details>
+          )}
+          {alignmentPreview.issues.some((i) => i.severity === "error") && (
+            <span>
+              {alignmentPreview.issues
+                .filter((i) => i.severity === "error")
+                .slice(0, 2)
+                .map((i) => i.message)
+                .join(" ")}
+            </span>
+          )}
         </div>
       )}
       <main
@@ -1050,20 +1188,26 @@ function App() {
         )}
         <section className={"canvas-area " + preset} aria-label="Ontwerpruimte">
           <Viewport
-            project={previewProject ?? p}
-            selected={previewProject ? [] : selected}
-            tool={readOnly ? "select" : tool}
+            project={previewProject ?? alignmentPreview?.project ?? p}
+            selected={showingPreview ? [] : selected}
+            tool={readOnly && tool !== "measure" ? "select" : tool}
             view={view}
             preset={preset}
             snap={snap}
             freeHeight={freeHeight}
-            contextId={previewProject ? null : editGroupId}
+            contextId={showingPreview ? null : editGroupId}
+            measurement={measurePoints}
+            onMeasure={(point) =>
+              setMeasurePoints((previous) =>
+                previous.length === 1 ? [...previous, point] : [point],
+              )
+            }
             onEnterGroup={(id) => {
-              if (previewProject) return;
+              if (showingPreview) return;
               const next = childGroupForObject(p, id, editGroupId);
               if (next) enterContext(next);
             }}
-            onSelect={previewProject ? () => {} : pick}
+            onSelect={showingPreview ? () => {} : pick}
             onTransform={(changes) =>
               change((q) =>
                 editObjects(
@@ -1080,6 +1224,13 @@ function App() {
             onReady={(a) => (api.current = a)}
             onError={setWebglError}
           />
+          {tool === "measure" && (
+            <MeasurementPanel
+              points={measurePoints}
+              onChange={setMeasurePoints}
+              onClose={() => setTool("select")}
+            />
+          )}
           {webglError && (
             <div className="webgl-error">
               <AlertTriangle />
@@ -1130,6 +1281,20 @@ function App() {
               onClick={() => setTool("rotate")}
             >
               <RotateCw size={19} />
+            </IconButton>
+            <IconButton
+              title="Afstand meten (T)"
+              active={tool === "measure"}
+              onClick={() => setTool(tool === "measure" ? "select" : "measure")}
+            >
+              <Ruler size={19} />
+            </IconButton>
+            <IconButton
+              title="Uitlijnvlakken verbinden"
+              disabled={!selected.length || readOnly || selectionLocked}
+              onClick={() => setModal("align")}
+            >
+              <Link2 size={19} />
             </IconButton>
             <span />
             <IconButton
@@ -1217,11 +1382,13 @@ function App() {
             </div>
           </div>
           <div className="canvas-hint">
-            {tool === "select"
-              ? "Klik om te selecteren · Shift voor meer · Sleep een selectiekader"
-              : tool === "move"
-                ? "Sleep de gekleurde assen · Vul exacte maten rechts in"
-                : "Sleep de groene boog · Draaiing in stappen van 15°"}
+            {tool === "measure"
+              ? "Klik twee punten op onderdelen of de vloer · exacte cm-coördinaten in het meetpaneel"
+              : tool === "select"
+                ? "Klik om te selecteren · Shift voor meer · Sleep een selectiekader"
+                : tool === "move"
+                  ? "Sleep de gekleurde assen · Vul exacte maten rechts in"
+                  : "Sleep de groene boog · Draaiing in stappen van 15°"}
             <span>
               Middenmuis: draaien · Shift + middenmuis: pannen · Scroll: zoomen
             </span>
@@ -1234,6 +1401,63 @@ function App() {
               <span className="units-label">CM</span>
             </div>
             <div className="inspector-scroll">
+              {selected.length > 0 && (
+                <div className="property-section connection-section">
+                  <h4>DEMO-VERBINDINGEN</h4>
+                  <button
+                    className="button full"
+                    disabled={readOnly || selectionLocked}
+                    onClick={() => setModal("align")}
+                  >
+                    <Link2 size={14} />
+                    Uitlijnvlakken verbinden
+                  </button>
+                  {(p.connections ?? [])
+                    .filter(
+                      (c) =>
+                        selected.includes(c.from.objectId) ||
+                        selected.includes(c.to.objectId),
+                    )
+                    .map((c) => (
+                      <div className="connection-row" key={c.id}>
+                        <span>
+                          {
+                            p.objects.find((o) => o.id === c.from.objectId)
+                              ?.name
+                          }{" "}
+                          ↔{" "}
+                          {p.objects.find((o) => o.id === c.to.objectId)?.name}
+                        </span>
+                        <button
+                          aria-label="Verbinding verwijderen"
+                          disabled={
+                            readOnly ||
+                            p.objects.some(
+                              (o) =>
+                                [c.from.objectId, c.to.objectId].includes(
+                                  o.id,
+                                ) && isLocked(p, o),
+                            )
+                          }
+                          onClick={() => {
+                            try {
+                              change((q) => removeConnection(q, c.id));
+                            } catch (e) {
+                              announce(
+                                e instanceof Error
+                                  ? e.message
+                                  : "Verwijderen mislukt.",
+                              );
+                            }
+                          }}
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+
               {!one ? (
                 <>
                   <div className="selection-summary">
@@ -1789,19 +2013,21 @@ function App() {
             role="dialog"
             aria-modal="true"
             aria-label={
-              modal === "server"
-                ? "Serverprojecten en revisies"
-                : modal === "ai"
-                  ? "Ontwerpen met Claude"
-                  : modal === "bom"
-                    ? "Onderdelenlijst"
-                    : modal === "room"
-                      ? "Ruimteafmetingen"
-                      : modal === "versions"
-                        ? "Versiegeschiedenis"
-                        : modal === "new"
-                          ? "Nieuw ontwerp"
-                          : "Bediening en informatie"
+              modal === "align"
+                ? "Demo-uitlijnvlakken verbinden"
+                : modal === "server"
+                  ? "Serverprojecten en revisies"
+                  : modal === "ai"
+                    ? "Ontwerpen met Claude"
+                    : modal === "bom"
+                      ? "Onderdelenlijst"
+                      : modal === "room"
+                        ? "Ruimteafmetingen"
+                        : modal === "versions"
+                          ? "Versiegeschiedenis"
+                          : modal === "new"
+                            ? "Nieuw ontwerp"
+                            : "Bediening en informatie"
             }
             onClick={(e) => e.stopPropagation()}
           >
@@ -1812,6 +2038,20 @@ function App() {
             >
               <X size={20} />
             </button>
+            {modal === "align" && (
+              <AlignmentPanel
+                project={p}
+                selected={selected}
+                freeHeight={freeHeight}
+                readOnly={readOnly}
+                onPreview={(preview) => {
+                  setAlignmentPreview(preview);
+                  setModal(null);
+                  setTool("select");
+                  setMeasurePoints([]);
+                }}
+              />
+            )}
             {modal === "server" && (
               <ServerPanel
                 connection={server.connection}
@@ -1824,6 +2064,8 @@ function App() {
                 state={server.state}
                 focusJobId={previewJobId}
                 onPreview={(project, id) => {
+                  setAlignmentPreview(null);
+                  setMeasurePoints([]);
                   setPreviewProject(project);
                   setPreviewJobId(id);
                   setModal(null);

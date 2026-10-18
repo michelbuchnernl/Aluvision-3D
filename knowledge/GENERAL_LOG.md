@@ -11,3 +11,7 @@ Dit zijn implementatie-inzichten uit dit project, geen structurele ontwerprichtl
 2026-10-18: een provider-timeout bewijst niet dat er niets is gefactureerd. Houd de reservering vast en maak reconciliatie expliciet; fake-provider-tests bewijzen de ledgerlogica, niet de echte factuur.
 
 2026-10-18: groepen met uitsluitend geneste kinderen hebben geen directe instanceverwijzingen. Prune op alle descendants om parent chains niet per ongeluk te verwijderen.
+
+2026-10-18: glTF gebruikt meters; projectdata blijft cm. Controleer de werkelijke geëxporteerde wereld-bounds na binair reload om een stille schaalfout niet uit alleen metadata af te leiden.
+
+2026-10-18: uitlijnpreview moet losstaan van opslag en bij apply de actuele basis/locks opnieuw toetsen. Bewaar verbindingen voorlopig als controlemarkeringen, zonder een niet-geïmplementeerde constraint solver te suggereren.

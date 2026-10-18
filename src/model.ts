@@ -1,3 +1,14 @@
+import {
+  socketsFor,
+  validSocket,
+  worldSocket,
+  distance,
+  dot,
+} from "./connectionMetadata.ts";
+import type {
+  ConnectionSocket,
+  SceneConnection,
+} from "./connectionMetadata.ts";
 /** Canonical units: centimetres. x = length, y = up, z = depth. Positions use bottom centre. */
 export type Vec3 = { x: number; y: number; z: number };
 export type Kind =
@@ -23,6 +34,7 @@ export interface Definition {
   source: "synthetic";
   catalogId: string;
   unique?: boolean;
+  sockets?: ConnectionSocket[];
 }
 export interface Instance {
   id: string;
@@ -69,6 +81,7 @@ export interface Project {
   tags: Tag[];
   groups: Group[];
   cameras: CameraBookmark[];
+  connections?: SceneConnection[];
   updatedAt: string;
 }
 export interface Issue {
@@ -388,6 +401,23 @@ export function validate(p: Project): Issue[] {
         message: `${o.name}: ophanging/ondersteuning niet gecontroleerd.`,
       });
   }
+  for (const connection of p.connections ?? []) {
+    const from = p.objects.find((o) => o.id === connection.from.objectId)!;
+    const to = p.objects.find((o) => o.id === connection.to.objectId)!;
+    const a = worldSocket(definition(p, from), from, connection.from.socketId);
+    const b = worldSocket(definition(p, to), to, connection.to.socketId);
+    if (
+      a.socket.profile !== b.socket.profile ||
+      distance(a.position, b.position) > 0.1 ||
+      dot(a.normal, b.normal) > -0.999
+    )
+      issues.push({
+        id: `connection-${connection.id}`,
+        objectId: from.id,
+        severity: "warning",
+        message: `Uitlijning gewijzigd: ${from.name} / ${to.name}. Controleer de demo-verbinding.`,
+      });
+  }
   return issues;
 }
 export function collisionWarnings(p: Project): Issue[] {
@@ -434,6 +464,7 @@ export function duplicate(
 ): { project: Project; ids: string[] } {
   const n = clone(p),
     result: string[] = [];
+  const instanceMapping = new Map<string, string>();
   if (p.objects.some((o) => ids.includes(o.id) && isLocked(p, o)))
     return { project: n, ids: [] };
   const selected = new Set(ids),
@@ -457,6 +488,7 @@ export function duplicate(
   for (const o of p.objects.filter((o) => selected.has(o.id))) {
     const c = clone(o);
     c.id = uid();
+    instanceMapping.set(o.id, c.id);
     c.name = `${o.name} · kopie`;
     c.position.x += 20;
     c.position.z += 20;
@@ -465,6 +497,27 @@ export function duplicate(
     else delete c.groupId;
     n.objects.push(c);
     result.push(c.id);
+  }
+  if (n.connections) {
+    n.connections.push(
+      ...(p.connections ?? [])
+        .filter(
+          (c) =>
+            instanceMapping.has(c.from.objectId) &&
+            instanceMapping.has(c.to.objectId),
+        )
+        .map((c) => ({
+          id: uid(),
+          from: {
+            objectId: instanceMapping.get(c.from.objectId)!,
+            socketId: c.from.socketId,
+          },
+          to: {
+            objectId: instanceMapping.get(c.to.objectId)!,
+            socketId: c.to.socketId,
+          },
+        })),
+    );
   }
   return { project: n, ids: result };
 }
@@ -556,6 +609,10 @@ export function removeObjects(p: Project, ids: string[]): Project {
   if (n.objects.some((o) => ids.includes(o.id) && isLocked(n, o))) return n;
   n.objects = n.objects.filter((o) => !ids.includes(o.id));
   n.groups = n.groups.filter((g) => groupObjectIds(n, g.id).length > 0);
+  if (n.connections)
+    n.connections = n.connections.filter(
+      (c) => !ids.includes(c.from.objectId) && !ids.includes(c.to.objectId),
+    );
   return n;
 }
 export interface BomRow {
@@ -682,7 +739,12 @@ export function parseProject(raw: string): Project {
       ].includes(d.kind) ||
       !Object.hasOwn(MATERIALS, d.material) ||
       d.source !== "synthetic" ||
-      !text(d.catalogId)
+      !text(d.catalogId) ||
+      (d.sockets !== undefined &&
+        (!Array.isArray(d.sockets) ||
+          d.sockets.length > 64 ||
+          !uniqueIds(d.sockets) ||
+          !d.sockets.every(validSocket)))
     )
       throw Error("Ongeldige onderdeeldefinitie.");
   for (const t of p.tags)
@@ -718,6 +780,33 @@ export function parseProject(raw: string): Project {
       (o.material && !Object.hasOwn(MATERIALS, o.material))
     )
       throw Error("Ongeldig object of ontbrekende verwijzing.");
+  if (p.connections !== undefined) {
+    if (
+      !Array.isArray(p.connections) ||
+      p.connections.length > 10000 ||
+      p.connections.some((c: any) => !c || !text(c.id)) ||
+      !uniqueIds(p.connections)
+    )
+      throw Error("Ongeldige verbindingen.");
+    const occupied = new Set<string>();
+    for (const c of p.connections) {
+      if (!c.from || !c.to || c.from.objectId === c.to.objectId)
+        throw Error("Ongeldige verbindingsreferentie.");
+      for (const endpoint of [c.from, c.to]) {
+        const o = p.objects.find((v: Instance) => v.id === endpoint.objectId);
+        const d =
+          o && p.definitions.find((v: Definition) => v.id === o.definitionId);
+        const key = JSON.stringify([endpoint.objectId, endpoint.socketId]);
+        if (
+          !d ||
+          !socketsFor(d).some((s) => s.id === endpoint.socketId) ||
+          occupied.has(key)
+        )
+          throw Error("Ontbrekend of bezet uitlijnpunt.");
+        occupied.add(key);
+      }
+    }
+  }
   for (const c of p.cameras)
     if (
       !text(c.name) ||
@@ -741,6 +830,7 @@ export function parseProject(raw: string): Project {
     tags: p.tags,
     groups: p.groups,
     cameras: p.cameras,
+    ...(p.connections !== undefined ? { connections: p.connections } : {}),
     updatedAt: typeof p.updatedAt === "string" ? p.updatedAt : now(),
   };
 }

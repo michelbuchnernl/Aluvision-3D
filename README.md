@@ -1,6 +1,6 @@
 # Boormester Immersive Studio
 
-Een browsergebaseerde 3D-ontwerper met een handmatige editor, lokale projectserver en optionele Claude-voorstellen voor immersieve ruimtes. Versie 0.2 is een werkend codeprototype van de volledige AluVision/Boormester-specificatie. Alle onderdelen zijn synthetische demo-geometrie; er zijn geen fabrikantmodellen, echte catalogusnummers, certificeringen of API-sleutels opgenomen.
+Een browsergebaseerde 3D-ontwerper met een handmatige editor, lokale projectserver en optionele Claude-voorstellen voor immersieve ruimtes. Versie 0.3 is een werkend codeprototype van de volledige AluVision/Boormester-specificatie. Alle onderdelen zijn synthetische demo-geometrie; er zijn geen fabrikantmodellen, echte catalogusnummers, certificeringen of API-sleutels opgenomen.
 
 ## Start op je laptop
 
@@ -45,6 +45,9 @@ Claude staat standaard uit. Zie [docs/SERVER_AND_AI.md](docs/SERVER_AND_AI.md) v
 - Nieuwe objecten op de vloer. Vrije Y-verplaatsing moet expliciet worden ingeschakeld; horizontaal verplaatsen behoudt bestaande hoogte. `Plaats op de vloer` is een afzonderlijke actie.
 - Gedeelde onderdeeldefinities en exemplaren, `Maak uniek`, gedeelde maatwijzigingen en zichtbaar materiaalbereik (exemplaar of definitie).
 - Geneste groepen met objectboom, dubbelklik om een groep te bewerken, breadcrumbs en Escape om een niveau terug te gaan. Gesloten groepen selecteren als één eenheid. Groepslocks en zichtbaarheid werken door naar kinderen; dupliceren behoudt de hiërarchie. Selectiemateriaal geldt voor alle geselecteerde exemplaren.
+- Tijdelijk twee-puntsmeetgereedschap (T) met 3D-/horizontale afstand en exacte cm-coördinaten.
+- Expliciete demo-vlakuitlijning met rotatie-/hoogtekeuze, preview/apply, harde grenzen, whole-group locks en optioneel opgeslagen verbindingscontrole. Geen fabrikantcompatibiliteit of automatische sleepmagneten.
+- GLB-geometrie-export in meters, met groepshiërarchie en instance-/definition-identiteit. Standaard zichtbare onderdelen, optioneel verborgen meenemen. Binair export-/reloadtraject getest. Zie [docs/SPATIAL_TOOLS.md](docs/SPATIAL_TOOLS.md).
 - Geroteerde begrenzingscontroles, zichtbare overschrijdingen en indicatieve AABB-overlapwaarschuwingen. Geen automatische geometriecorrectie of constructieve beoordeling.
 - Undo/redo tot 100 checkpoints, autosave, maximaal tien lokale herstelpunten, JSON-import/export en een bewerkingslease tussen tabs van dezelfde browser/origin.
 - SQLite-projecten, onveranderlijke serverrevisies, herstellen als nieuwe revisie, per-tab bewerkingslease, expliciete overname en zichtbare revisieconflicten. Lokale wijzigingen blijven bij een conflict beschikbaar voor herstel.
@@ -57,11 +60,11 @@ Claude staat standaard uit. Zie [docs/SERVER_AND_AI.md](docs/SERVER_AND_AI.md) v
 
 ## Verificatie en grenzen
 
-**68 geautomatiseerde tests slagen; TypeScript, productie-build en formattercontrole slagen.** Zie [TEST_RESULTS.md](TEST_RESULTS.md).
+**81 geautomatiseerde tests slagen; TypeScript, productie-build en formattercontrole slagen.** Zie [TEST_RESULTS.md](TEST_RESULTS.md).
 
 Browserautomatisering is in deze sessie door het browserbeveiligingsbeleid geblokkeerd. Daarom is WebGL-weergave, muis-/touchinteractie, opslag tussen echte tabs en Safari-gedrag nog niet empirisch bevestigd. De eerste vervolgstap is de handmatige acceptatiecheck in [docs/MANUAL_QA.md](docs/MANUAL_QA.md). Een geslaagde build is geen bewijs dat de 3D-weergave werkt.
 
-Nog niet gebouwd: accounts en rollen, echte catalogi/importadapters, gedeelde assembly-definities, losse vlakmaterialen, verbindingssnapping, beeldintake, video/UV-mapping, WebXR, Blender-renderqueue, volledige assetpakketten, automatische modelroutering en algemene kennisdistillatie. Het volledige overzicht staat in [REQUIREMENTS.md](REQUIREMENTS.md).
+Nog niet gebouwd: accounts en rollen, echte catalogi/importadapters, gedeelde assembly-definities, losse vlakmaterialen, automatische verbindingssnapping tijdens slepen, beeldintake, video/UV-mapping, WebXR, Blender-renderqueue, volledige assetpakketten, automatische modelroutering en algemene kennisdistillatie. Het volledige overzicht staat in [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## Bediening
 
@@ -79,6 +82,8 @@ Nog niet gebouwd: accounts en rollen, echte catalogi/importadapters, gedeelde as
 | Herstelpunt bewaren | Ctrl/Cmd + S |
 | Passend in beeld | F |
 | Verwijderen / deselecteren | Delete / Escape |
+| Tijdelijk afstand meten | T / liniaalicoon |
+| Demo-uitlijning | Selectie → verbindingsicoon → preview → toepassen |
 | Groep bewerken | Dubbelklik in viewport of objectboom |
 | Context omhoog / direct kiezen | Escape / breadcrumb |
 
@@ -86,7 +91,7 @@ X is lengte, Y is omhoog en Z is diepte. Het nulpunt is midden op de vloer. Een 
 
 ## Bewaren en hervatten
 
-Browseropslag is lokaal aan deze browser en dit adres. Download JSON voor overdracht naar een ander apparaat of als blijvende kopie. Git bewaart de applicatiebron, niet automatisch je lokaal gemaakte ontwerpen. `examples/immersive-room-4x8.json` is een importeerbare referentiescène.
+Browseropslag is lokaal aan deze browser en dit adres. Download JSON voor overdracht naar een ander apparaat of als blijvende kopie. Git bewaart de applicatiebron, niet automatisch je lokaal gemaakte ontwerpen. `examples/immersive-room-4x8.json` is een importeerbare referentiescène; `examples/connected-demo-frames.json` demonstreert twee uitgelijnde frames met verbindingsmetadata.
 
 Verbind via **Server** om een project in SQLite te bewaren of te openen. Server-autosave gebruikt een seriële opslagqueue en verwachte revisienummers. De serverlease verloopt na 30 seconden en wordt elke 10 seconden vernieuwd. Overname laadt de gezaghebbende serverrevisie. Bij conflict/offline status: bewaar eerst je lokale herstelkopie of JSON en kies daarna bewust welke versie je opent.
 

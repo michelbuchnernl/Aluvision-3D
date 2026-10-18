@@ -40,3 +40,13 @@ Aluvision-3D-tool blijft ongemoeid. Michel selecteerde Aluvision-3D nadat gemeld
 
 ## Verificatiegrens
 De cloudbrowser wees observatie af via zijn URL-beveiligingsbeleid. Dat wordt niet omzeild. Unit-/exporttests, typecheck en build kunnen doorgaan; werkelijke WebGL/UI/Safari-acceptatie blijft open. Geen gefabriceerde screenshots of browserresultaten.
+
+## Ruimtelijke tools en uitwisseling — versie 0.3
+
+Sockets zijn optionele definitiemetadata met parametische omhullingscoördinaten en kardinale normaal. Oude schema-1-projecten krijgen zes virtuele demo-vlakken als fallback. `connections` is een optioneel rootveld; bestaande projecten blijven importeerbaar. Nieuwe JSON met deze velden vereist versie 0.3 om ze te behouden. Dit is geen fabrikantconnectorstandaard.
+
+Uitlijnen gebruikt dezelfde cm- en Y-rotatiesemantiek als de editor. Een geselecteerde groep wordt rigid om het brononderdeel gedraaid en daarna verschoven. Hoogtewijziging is expliciet. Preview is onafhankelijk van projectopslag; toepassen vergelijkt de volledige actuele basis en berekent opnieuw. Verbindingen zijn controlemarkeringen: latere edits blijven mogelijk en discrepanties worden waarschuwingen. De app claimt geen constraint solver of constructieve controle.
+
+Puntmeting is tijdelijke presentatiestaat, geen model- of revisiemutatie. Meshhit of begrensde vloerhit bepaalt het punt; het meetpaneel kan exact cm-coördinaten invoeren. Geen automatische corner inference.
+
+GLB wordt los lazy-loaded via de geïnstalleerde Three.js GLTFExporter. Een rootfactor 0,01 zet cm om naar de voorgeschreven meters in glTF. Dezelfde geometry factory wordt gebruikt; templategeometrie/materialen worden gedeeld per definitie/materiaalcombinatie en na export vrijgegeven. Visible-only is standaard; verborgen meenemen is expliciet. JSON blijft het verliesloze app-formaat. Tests lezen de werkelijke binary via GLTFLoader terug en vergelijken wereld-bounds, geen gesimuleerde exporterresultaten.

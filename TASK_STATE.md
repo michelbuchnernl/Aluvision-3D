@@ -1,6 +1,6 @@
-# Bouwstatus — versie 0.2
+# Bouwstatus — versie 0.3
 
-18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; deze afronding bevat groepscorrecties, formattering en actuele overdracht.
+18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
 ## Gebouwd
 
@@ -12,9 +12,18 @@
 - Automatisch afgeleide project-LOG/CONTEXT uit SQLite. Geen algemene kennisdistillatie.
 - Geneste groepen, context/breadcrumbs, objectboom, inherited locks/zichtbaarheid, hiërarchisch duplicate/ungroup, selectiemateriaal. Groepen zijn nog geen gedeelde assembly-definities.
 
+## Toegevoegd in versie 0.3
+
+- Parametrische demo-sockets en optionele verbindingsrecords, backward-compatible binnen schema 1.
+- Expliciete vlakuitlijning: hele selectie rigid draaien/verplaatsen, locks, hoogteakkoord, profielen, bounds en onafhankelijke preview/apply met stale-baseguard.
+- Verbindingscontrole bij latere edits, pruning bij delete en interne links kopiëren bij duplicate. Geen echte fabrikantcompatibiliteit of constraint solver.
+- Tijdelijke 2-puntsmeting met viewportlijn, 3D/horizontale afstand en exacte cm-invoer; shortcut T.
+- GLB-export via dezelfde geometrie met meterconversie, hiërarchie/identiteit/materialen en expliciet include-hidden. Echte binary roundtrip; geen GLB-import.
+- Importeerbaar voorbeeld examples/connected-demo-frames.json en gebruiksdocument docs/SPATIAL_TOOLS.md.
+
 ## Bewijs
 
-68 tests slagen, inclusief client → echte HTTP → fake Claude → preview → revisie, CLI-start/herstart, proceslock, budgetconcurrency en hiërarchie. TypeScript/productie-build, formatter, diff-whitespacecontrole slagen. Productieaudit meldt 0 kwetsbaarheden. Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen WebGL/UI/Safari-acceptatie geclaimd. Zie TEST_RESULTS.
+81 tests slagen, inclusief client → echte HTTP → fake Claude → preview → revisie, CLI-start/herstart, proceslock, budgetconcurrency, hiërarchie, uitlijning, meten en echte GLB-roundtrips. TypeScript/productie-build, formatter, diff-whitespacecontrole slagen. Productieaudit meldt 0 kwetsbaarheden. Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen WebGL/UI/Safari-acceptatie geclaimd. Zie TEST_RESULTS.
 
 ## Bestemming en hervatten
 
@@ -35,9 +44,9 @@ Editor: http://localhost:4173. API: 8787. Productie: `npm run build` en `npm sta
 ## Vervolg naar volledige specificatie
 
 1. Echte browseracceptatie van docs/MANUAL_QA.md en geobserveerde fouten herstellen.
-2. Connection metadata/snapping, meetgereedschap, catalogusadapters en gedeelde assembly-definities.
+2. Catalogusadapters, gedeelde assembly-definities, socket-editor en magnetische sleep-snapping.
 3. Media-intake, UV/corner canvas, video en read-only WebXR.
-4. Blender-renderqueue, GLB/assetpackage en exportverfijning.
+4. Blender-renderqueue, GLB-import/assetpackage en exportverfijning.
 5. Modelroutering/kennisdistillatie en volledige referentieacceptatie.
 
 Een geslaagde API-/buildtest is geen browseracceptatie. Dit bestand belooft geen zelfstandig achtergrondproces nadat de beurt is beëindigd. Bij hervatten: inspecteer de echte branch/status en de actuele documenten voordat je verder bouwt.

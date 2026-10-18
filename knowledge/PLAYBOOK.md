@@ -17,3 +17,10 @@ Promoveer niets tot browsergevalideerd voordat docs/MANUAL_QA.md daadwerkelijk i
 | Groepsoperaties behouden parent chains en blokkeren gedeeltelijke wijziging bij een locked child. | Model/operation-getest | tests/hierarchy.test.mjs |
 
 Deze backend-/modelbewijzen zijn geen promotie tot browser- of echte-provideracceptatie.
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Rigid group alignment verplaatst alle geselecteerde kinderen; hoogte vereist expliciete keuze en stale preview mag niets overschrijven. | Model-getest | tests/spatial.test.mjs |
+| Geometrie-export moet via een echte binary roundtrip op wereld-bounds en eenheden worden gecontroleerd. | GLB-roundtrip getest | tests/glb.test.mjs |
+
+Demo-vlakprofielen zijn geen bewijs van fysieke compatibiliteit; externe viewer-/browseracceptatie staat nog open.

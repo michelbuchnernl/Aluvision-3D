@@ -11,3 +11,5 @@
 - 2026-10-18: versie 0.2 voegt Node/SQLite, serverrevisies/leases, werkelijke editor-opslagqueue en optionele Claude-voorstellen met kostenledger toe. Geen echte provider-calls.
 - Geneste groepen/context en regressies afgerond; 68 tests, productie-build, formatcontrole en productieaudit slagen. Browseracceptatie blijft open.
 - Checkpoint 2f3592f daadwerkelijk gepusht; afronding wordt apart bewaard op dezelfde branch.
+
+- 2026-10-18: versie 0.3: parametrische demo-vlakken/verbindingen, expliciete uitlijnpreview/apply, puntmeting en GLB-export. 81 tests, build en formatter worden bij dit checkpoint vastgelegd. Geen browser-/externe-vieweracceptatie geclaimd.

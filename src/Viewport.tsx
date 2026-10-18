@@ -16,7 +16,7 @@ import {
   selectionUnits,
 } from "./model";
 import type { Project, Vec3, View, Preset, CameraBookmark } from "./model";
-export type Tool = "select" | "move" | "rotate";
+export type Tool = "select" | "move" | "rotate" | "measure";
 export interface ViewportApi {
   fit: () => void;
   capture: () => string;
@@ -32,6 +32,8 @@ interface Props {
   snap: number;
   freeHeight: boolean;
   contextId: string | null;
+  measurement: Vec3[];
+  onMeasure: (point: Vec3) => void;
   onEnterGroup: (objectId: string) => void;
   onSelect: (ids: string[], add: boolean) => void;
   onTransform: (
@@ -368,6 +370,24 @@ export default function Viewport(props: Props) {
         ),
         camera,
       );
+      if (latest.current.tool === "measure") {
+        const hits = raycaster.intersectObjects([...objects.values()], true);
+        const point =
+          hits[0]?.point ??
+          raycaster.ray.intersectPlane(
+            new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
+            new THREE.Vector3(),
+          );
+        const room = latest.current.project.room;
+        if (
+          point &&
+          (hits.length ||
+            (Math.abs(point.x) <= room.length / 2 &&
+              Math.abs(point.z) <= room.depth / 2))
+        )
+          latest.current.onMeasure({ x: point.x, y: point.y, z: point.z });
+        return;
+      }
       const hits = raycaster.intersectObjects(
         [...objects.values()].filter((g) =>
           inEditContext(
@@ -384,7 +404,7 @@ export default function Viewport(props: Props) {
       latest.current.onSelect(ids, from.shift);
     };
     const doubleClick = (event: MouseEvent) => {
-      if (active) return;
+      if (active || latest.current.tool === "measure") return;
       const r = el.getBoundingClientRect();
       raycaster.setFromCamera(
         new THREE.Vector2(
@@ -595,6 +615,33 @@ export default function Viewport(props: Props) {
         content.add(h);
       }
     }
+    if (props.tool === "measure" && props.measurement.length) {
+      for (const point of props.measurement) {
+        const marker = new THREE.Mesh(
+          new THREE.SphereGeometry(2.5, 12, 8),
+          new THREE.MeshBasicMaterial({ color: "#e59630", depthTest: false }),
+        );
+        marker.position.copy(v(point));
+        marker.renderOrder = 1000;
+        content.add(marker);
+      }
+      if (props.measurement.length === 2) {
+        const [a, b] = props.measurement;
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([v(a), v(b)]),
+          new THREE.LineBasicMaterial({ color: "#e59630", depthTest: false }),
+        );
+        line.renderOrder = 1000;
+        content.add(line);
+        label(
+          `${v(a).distanceTo(v(b)).toFixed(2)} cm`,
+          v(a)
+            .add(v(b))
+            .multiplyScalar(0.5)
+            .add(new THREE.Vector3(0, 10, 0)),
+        );
+      }
+    }
     const outlines: THREE.BoxHelper[] = [];
     for (const id of props.selected) {
       const g = objects.get(id);
@@ -610,7 +657,7 @@ export default function Viewport(props: Props) {
       .filter((g: any) => g && !isLocked(p, g.userData.instance));
     if (
       movable.length &&
-      props.tool !== "select" &&
+      (props.tool === "move" || props.tool === "rotate") &&
       !p.objects.some((o) => props.selected.includes(o.id) && isLocked(p, o))
     ) {
       const centre = new THREE.Vector3();
@@ -634,6 +681,7 @@ export default function Viewport(props: Props) {
     props.snap,
     props.freeHeight,
     props.contextId,
+    props.measurement,
   ]);
   useEffect(() => {
     runtime.current?.setView(props.view);

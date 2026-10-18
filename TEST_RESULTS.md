@@ -6,13 +6,15 @@ Datum: 18 oktober 2026. Omgeving: Linux, Node 24.19.0, npm 11.9.0.
 
 | Controle | Werkelijk resultaat |
 | --- | --- |
-| `npm test` | 68 tests, 68 geslaagd, 0 gefaald |
+| `npm test` | 81 tests, 81 geslaagd, 0 gefaald |
 | `npm run build` | TypeScript-check en Vite-productie-build geslaagd |
 | `npm run format:check` / `git diff --check` | Formatter en whitespacecontrole geslaagd |
 | CLI-start/herstart | Echte Node-server via child process gestart, HTTP-project opgeslagen, tweede schrijver afgewezen, schoon gestopt, SQLite-project na herstart teruggelezen |
 | Client/API/Claude-keten | Werkelijke editorconnection → HTTP → fake provider → preview → toepassen als revisie 2; geen betaalde aanvraag |
 | `npm audit --omit=dev --json` | 0 gemelde kwetsbaarheden in productiedependencytree na uuid-override |
 | XLSX-roundtrip | Bestand in geheugen gegenereerd en opnieuw geopend; BOM-totaal en instanceblad tellen alle 36 demo-objecten |
+| GLB-roundtrip | Echte binary GLB met Three.js geëxporteerd en opnieuw geladen; 36 demo-instances en alle wereld-bounds gecontroleerd in meters, ook rotatie/nesting/visibility en lege scène |
+| Ruimtelijke bewerkingen | 9 tests voor demo-uitlijning, meting, validatie, locks, hele groepen, stale preview en verbindingslevenscyclus |
 | PDF-data | 4 pagina's zonder browserbeeld: drie technische aanzichten en controleblad; A4 landscape, 1:50 voor de demo |
 | PDF-proefrender | Gegenereerd met de app-exporter en met Poppler gerenderd; zichtbare proefpagina's gecontroleerd op leesbaarheid en maatlabels |
 
@@ -37,6 +39,12 @@ Datum: 18 oktober 2026. Omgeving: Linux, Node 24.19.0, npm 11.9.0.
 - Gemeten kosten bij ongeldige output, cacheprijzen, onbekende kosten, reconciliatie, quote-/prijsexpiratie en geen automatische inference-retry.
 - Geneste groepen: selectie per niveau, inherited locks/zichtbaarheid, duplicatie met nieuwe groeps-IDs, ungroup, verwijderen/pruning, cyclus-/referentievalidatie en AI-verwijderen met behoud van parent groups.
 
+- Parametrische sockets, face-/normaalvalidatie, incompatibele profielen en bezette/ontbrekende eindpunten.
+- Uitlijnen van groepen met behoud van afstanden/hoogten, expliciete vrije hoogte, bounds en stale-previewguard.
+- Verbindingen blijven bij JSON/unique behouden; duplicate kopieert alleen interne links en delete prunet referenties.
+- Exacte 3D-/horizontale meting met signed assen en afwijzen van ongeldige punten.
+- GLB-header/versie, binair reload, 0,01-conversie naar meters, nested identity/materialen en include-hiddenkeuze. Tests gebruiken alleen een Blob-reader shim; geen canvas, WebGL of UI wordt nagebootst.
+
 ## Gevonden en hersteld tijdens bouwen
 
 1. Floating-point roundtrip had een onterechte test met exacte decimale gelijkheid; vervangen door een passende numerieke tolerantie.
@@ -54,7 +62,7 @@ Datum: 18 oktober 2026. Omgeving: Linux, Node 24.19.0, npm 11.9.0.
 
 De cloudbrowser wees observatie af via het URL-beveiligingsbeleid. Deze afwijzing is niet omzeild. Het lokale previewhulpmiddel meldde een gestart previewadres, maar er is **geen succesvolle browserobservatie** geweest. In de eerste ronde bereikte een loopback-probe geen previewserver. In versie 0.2 is serverstart wél apart met echte CLI-/HTTP-tests bevestigd; dit levert nog geen browserobservatie op. Testprocessen worden na afloop gestopt.
 
-Daarom zijn WebGL-weergave, echte controls, downloadinteractie, camera/frustumherstel in browser, autosave/herstel en leasegedrag tussen echte tabs nog niet empirisch bevestigd. Ook de nieuwe server-/Claude-/groeppanelen zijn nog niet visueel getest. Echte Claude-providerintegratie, fysieke iPhone/Safari, WebXR en Blender zijn niet getest. Er zijn geen echte API-calls uitgevoerd. Er zijn geen browser-screenshots of verzonnen visuele resultaten.
+Daarom zijn WebGL-weergave, echte controls, downloadinteractie, camera/frustumherstel in browser, autosave/herstel en leasegedrag tussen echte tabs nog niet empirisch bevestigd. Ook de server-/Claude-/groeppanelen, de nieuwe meet-/uitlijnbediening en GLB-download zijn nog niet visueel getest. Externe GLB-viewers/Blender zijn niet geopend; alleen echte data-roundtrips zijn uitgevoerd. Echte Claude-providerintegratie, fysieke iPhone/Safari, WebXR en Blender zijn niet getest. Er zijn geen echte API-calls uitgevoerd. Er zijn geen browser-screenshots of verzonnen visuele resultaten.
 
 Vite meldt grote chunks door Three.js en de lazy-loaded Excel/PDF-exporter. De build slaagt, maar werkelijke laadtijd en mobiele performance zijn niet gemeten. Een schone npm-audit is geen volledige security review.
 

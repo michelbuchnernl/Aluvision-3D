@@ -1,3 +1,4 @@
+import { socketsFor } from "./connectionMetadata.ts";
 import {
   clone,
   definition,
@@ -243,6 +244,7 @@ export function compactScene(p: Project) {
     name: p.name,
     units: p.units,
     room: p.room,
+    connections: p.connections ?? [],
     groups: p.groups.map((g) => ({
       id: g.id,
       name: g.name,
@@ -257,6 +259,7 @@ export function compactScene(p: Project) {
       size: d.size,
       material: d.material,
       source: d.source,
+      sockets: socketsFor(d),
     })),
     instances: p.objects.map((o) => ({
       id: o.id,

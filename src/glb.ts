@@ -8,6 +8,7 @@ import {
   parseProject,
 } from "./model.ts";
 import type { Project } from "./model.ts";
+import { assetRegistry } from "./assets.ts";
 import { createPart } from "./sceneGeometry.ts";
 /** Geometry exchange only: GLB is not a lossless Studio project or a fabrication model. */
 export function glbScene(input: Project, includeHidden = false) {
@@ -47,8 +48,16 @@ export function glbScene(input: Project, includeHidden = false) {
     (g.parentId ? groups.get(g.parentId)! : root).add(groups.get(g.id)!);
   const templates = new Map<string, THREE.Group>();
   for (const o of selected) {
-    const d = definition(p, o),
-      id = effectiveMaterial(p, o),
+    const d = definition(p, o);
+    if (
+      d.source === "imported" &&
+      d.asset &&
+      !assetRegistry.has(d.asset.sha256)
+    )
+      throw Error(
+        `Model ${d.name} is niet geladen; importeer het GLB opnieuw voordat je exporteert.`,
+      );
+    const id = effectiveMaterial(p, o),
       key = JSON.stringify([d.id, id]);
     let template = templates.get(key);
     if (!template) {
@@ -74,6 +83,8 @@ export function glbScene(input: Project, includeHidden = false) {
       studioInstanceId: o.id,
       definitionId: d.id,
       kind: d.kind,
+      decorative: !!d.decorative,
+      imported: d.source === "imported",
       catalogId: d.catalogId,
       source: d.source,
       materialId: id,

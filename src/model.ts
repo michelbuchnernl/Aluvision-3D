@@ -11,10 +11,18 @@ import type {
 } from "./connectionMetadata.ts";
 import { pruneCanvases, validateMedia } from "./media.ts";
 import type { MediaAsset, ProjectionCanvas } from "./media.ts";
+import type { ImportedAsset } from "./assetImport.ts";
 /** Canonical units: centimetres. x = length, y = up, z = depth. Positions use bottom centre. */
 export type Vec3 = { x: number; y: number; z: number };
 export type Kind =
-  "frame" | "panel" | "truss" | "connector" | "door" | "table" | "projector";
+  | "frame"
+  | "panel"
+  | "truss"
+  | "connector"
+  | "door"
+  | "table"
+  | "projector"
+  | "asset";
 export type Preset = "technical" | "presentation" | "immersive";
 export type View =
   | "perspective"
@@ -33,8 +41,12 @@ export interface Definition {
   kind: Kind;
   size: Vec3;
   material: MaterialId;
-  source: "synthetic";
+  source: "synthetic" | "imported";
   catalogId: string;
+  /** Decorative objects stay out of the structural BOM and are listed separately. */
+  decorative?: boolean;
+  /** Present for imported GLB models; the bytes live in the asset store, not in the project. */
+  asset?: ImportedAsset;
   unique?: boolean;
   sockets?: ConnectionSocket[];
 }
@@ -668,11 +680,20 @@ export interface BomRow {
   status: string;
   group: string;
 }
-export function bom(p: Project): BomRow[] {
+export const statusOf = (d: Definition) =>
+  d.source === "imported"
+    ? d.unique
+      ? "Geïmporteerd · niet geverifieerd · uniek"
+      : "Geïmporteerd · niet geverifieerd"
+    : d.unique
+      ? "Synthetisch · uniek"
+      : "Synthetische demo";
+function bomRows(p: Project, decorative: boolean): BomRow[] {
   const rows = new Map<string, BomRow>();
   for (const o of p.objects) {
-    const d = definition(p, o),
-      m = effectiveMaterial(p, o),
+    const d = definition(p, o);
+    if (!!d.decorative !== decorative) continue;
+    const m = effectiveMaterial(p, o),
       g =
         groupPath(p, o.groupId)
           .map((g) => g.name)
@@ -689,12 +710,18 @@ export function bom(p: Project): BomRow[] {
         quantity: 1,
         size: d.size,
         material: m,
-        status: d.unique ? "Synthetisch · uniek" : "Synthetische demo",
+        status: decorative ? "Decoratief · buiten BOM" : statusOf(d),
         group: g,
       });
   }
   return [...rows.values()];
 }
+/** Structural bill of materials. Decorative objects are excluded on purpose; see decorativeBom. */
+export const bom = (p: Project): BomRow[] => bomRows(p, false);
+/** Decorative objects: listed separately so nothing is hidden, but never counted as structural parts. */
+export const decorativeBom = (p: Project): BomRow[] => bomRows(p, true);
+export const decorativeCount = (p: Project) =>
+  p.objects.filter((o) => definition(p, o).decorative).length;
 export function bomCsv(p: Project): string {
   const q = (s: unknown) => {
     const text =
@@ -739,6 +766,34 @@ const text = (v: unknown) =>
   typeof v === "string" && v.length > 0 && v.length <= 300;
 const uniqueIds = (a: { id: string }[]) =>
   new Set(a.map((o) => o.id)).size === a.length;
+const UNITS = ["m", "cm", "mm"];
+/** Synthetic parts carry no asset; imported parts must carry complete, bounded provenance. */
+function validSource(d: any) {
+  if (d.decorative !== undefined && typeof d.decorative !== "boolean")
+    return false;
+  if (d.source === "synthetic")
+    return d.kind !== "asset" && d.asset === undefined;
+  if (d.source !== "imported" || d.kind !== "asset") return false;
+  const a = d.asset;
+  return (
+    !!a &&
+    /^[0-9a-f]{64}$/.test(a.sha256) &&
+    Number.isSafeInteger(a.bytes) &&
+    a.bytes > 0 &&
+    a.bytes <= 25_000_000 &&
+    typeof a.fileName === "string" &&
+    a.fileName.length <= 120 &&
+    UNITS.includes(a.units) &&
+    typeof a.provenance === "string" &&
+    a.provenance.trim().length >= 3 &&
+    a.provenance.length <= 500 &&
+    (a.license === undefined ||
+      (typeof a.license === "string" && a.license.length <= 300)) &&
+    Number.isSafeInteger(a.triangles) &&
+    a.triangles >= 0 &&
+    Math.max(d.size.x, d.size.y, d.size.z) <= 100000
+  );
+}
 export function parseProject(raw: string): Project {
   if (raw.length > 10_000_000) throw Error("Project is groter dan 10 MB.");
   const p = JSON.parse(raw);
@@ -778,9 +833,10 @@ export function parseProject(raw: string): Project {
         "door",
         "table",
         "projector",
+        "asset",
       ].includes(d.kind) ||
       !Object.hasOwn(MATERIALS, d.material) ||
-      d.source !== "synthetic" ||
+      !validSource(d) ||
       !text(d.catalogId) ||
       (d.sockets !== undefined &&
         (!Array.isArray(d.sockets) ||

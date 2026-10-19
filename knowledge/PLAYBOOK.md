@@ -38,3 +38,11 @@ Demo-vlakprofielen zijn geen bewijs van fysieke compatibiliteit; externe viewer-
 | Modelkeuze volgt waarneembare signalen en alleen modellen die de sleutel werkelijk kan gebruiken; terugval wordt in de reden vermeld. | Unit-getest met nepprovider | tests/routing.test.mjs |
 
 Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headset of echte API-kosten.
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Importeer geen eenheden "op gevoel": laat de gebruiker m/cm/mm kiezen en toon de afmeting in cm vóór het toevoegen. | Unit- en e2e-getest | tests/assets.test.mjs, e2e/studio.spec.mjs |
+| Geïmporteerde modellen krijgen een eigen code, verplichte herkomst en de status "niet geverifieerd"; nooit een fabrikantnummer. | Unit-getest | tests/assets.test.mjs |
+| Decoratieve objecten staan buiten de structurele BOM maar blijven zichtbaar op een eigen blad; structureel + decoratief = scène. | Unit- en e2e-getest | tests/assets.test.mjs, e2e/studio.spec.mjs |
+| Een ontbrekend model is een zichtbaar draadkader van de juiste maat; export en render weigeren in plaats van stil iets weg te laten. | Unit-getest | tests/assets.test.mjs |
+| Bewaar bytes content-addressed en controleer bij heropenen dat de bestandsnaam de hash van de inhoud is. | Unit-getest | tests/package.test.mjs |

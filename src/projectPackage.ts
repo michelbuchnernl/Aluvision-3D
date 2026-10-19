@@ -14,6 +14,9 @@ const ALLOWED = [
   "bom.xlsx",
   "README.txt",
 ];
+/** Imported models travel content-addressed: assets/<sha256>.glb. */
+const ASSET = /^assets\/([0-9a-f]{64})\.glb$/;
+const allowed = (name: string) => ALLOWED.includes(name) || ASSET.test(name);
 const MAX_UNPACKED = 80_000_000;
 export interface PackageFile {
   path: string;
@@ -38,6 +41,8 @@ export interface PackageManifest {
     bytes?: number;
     sha256?: string;
   }[];
+  /** SHA-256 of imported models whose bytes were not available when the package was made. */
+  assetsMissing?: string[];
   notes: string[];
 }
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -49,7 +54,12 @@ export async function sha256Hex(bytes: Uint8Array): Promise<string> {
 }
 export async function buildPackage(
   p: Project,
-  parts: { glb: Uint8Array; xlsx: Uint8Array },
+  parts: {
+    glb: Uint8Array;
+    xlsx: Uint8Array;
+    /** Bytes of imported models by SHA-256; missing ones are reported in the manifest. */
+    assets?: Map<string, Uint8Array>;
+  },
   createdAt = new Date().toISOString(),
 ): Promise<Uint8Array> {
   const project = strToU8(serialize(p));
@@ -67,12 +77,21 @@ export async function buildPackage(
       "",
     ].join("\n"),
   );
-  const files = {
+  const files: Record<string, Uint8Array> = {
     "project.json": project,
     "scene.glb": parts.glb,
     "bom.xlsx": parts.xlsx,
     "README.txt": readme,
   };
+  const importedShas = [
+    ...new Set(p.definitions.flatMap((d) => (d.asset ? [d.asset.sha256] : []))),
+  ];
+  const assetsMissing: string[] = [];
+  for (const sha of importedShas) {
+    const data = parts.assets?.get(sha);
+    if (data) files[`assets/${sha}.glb`] = data;
+    else assetsMissing.push(sha);
+  }
   const manifest: PackageManifest = {
     format: PACKAGE_FORMAT,
     version: PACKAGE_VERSION,
@@ -102,7 +121,16 @@ export async function buildPackage(
         bytes: m.bytes,
         sha256: m.sha256,
       })),
-    notes: ["Synthetische demo-catalogus", "Geen constructieve certificering"],
+    assetsMissing,
+    notes: [
+      "Synthetische demo-catalogus",
+      ...(importedShas.length
+        ? [
+            "Bevat geïmporteerde modellen: niet geverifieerd, herkomst in project.json",
+          ]
+        : []),
+      "Geen constructieve certificering",
+    ],
   };
   return zipSync(
     { "manifest.json": strToU8(JSON.stringify(manifest, null, 2)), ...files },
@@ -113,6 +141,8 @@ export interface ReadPackage {
   project: Project;
   manifest: PackageManifest;
   warnings: string[];
+  /** Imported models by SHA-256, verified against both the manifest and their file name. */
+  assets: Map<string, Uint8Array>;
 }
 export async function readPackage(bytes: Uint8Array): Promise<ReadPackage> {
   const bad = (msg: string): never => {
@@ -132,7 +162,7 @@ export async function readPackage(bytes: Uint8Array): Promise<ReadPackage> {
     return bad(e instanceof Error ? e.message : "geen geldig zipbestand.");
   }
   for (const name of Object.keys(entries))
-    if (!ALLOWED.includes(name))
+    if (!allowed(name))
       bad(`onverwacht bestand ${JSON.stringify(name.slice(0, 80))}.`);
   if (!entries["manifest.json"]) bad("manifest.json ontbreekt.");
   let manifest: PackageManifest;
@@ -151,7 +181,7 @@ export async function readPackage(bytes: Uint8Array): Promise<ReadPackage> {
   for (const f of manifest.files) {
     if (
       !f ||
-      !ALLOWED.includes(f.path) ||
+      !allowed(f.path) ||
       f.path === "manifest.json" ||
       listed.has(f.path)
     )
@@ -183,10 +213,30 @@ export async function readPackage(bytes: Uint8Array): Promise<ReadPackage> {
   const glb = entries["scene.glb"];
   if (strFromU8(glb.subarray(0, 4)) !== "glTF")
     bad("scene.glb is geen binair GLB.");
+  const assets = new Map<string, Uint8Array>();
+  for (const [name, data] of Object.entries(entries)) {
+    const m = ASSET.exec(name);
+    if (!m) continue;
+    // Content-addressed: the file name must be the hash of the bytes (the manifest check already bound the bytes).
+    if ((await sha256Hex(data)) !== m[1])
+      bad(`${name} past niet bij zijn eigen controlesom.`);
+    if (strFromU8(data.subarray(0, 4)) !== "glTF")
+      bad(`${name} is geen binair GLB.`);
+    assets.set(m[1], data);
+  }
   const warnings = manifest.mediaToReattach?.length
     ? [
         `${manifest.mediaToReattach.length} mediabestand(en) moeten opnieuw worden gekoppeld: ${manifest.mediaToReattach.map((m) => m.name).join(", ")}.`,
       ]
     : [];
-  return { project, manifest, warnings };
+  const lacking = [
+    ...new Set(
+      project.definitions.flatMap((d) => (d.asset ? [d.asset.sha256] : [])),
+    ),
+  ].filter((sha) => !assets.has(sha));
+  if (lacking.length)
+    warnings.push(
+      `${lacking.length} geïmporteerd(e) model(len) zit(ten) niet in het pakket en worden als oranje kader getoond tot je ze opnieuw importeert.`,
+    );
+  return { project, manifest, warnings, assets };
 }

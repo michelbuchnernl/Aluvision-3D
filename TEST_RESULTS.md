@@ -102,3 +102,10 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - `npm test`: 137 tests (routing 8, knowledge 7 nieuw). Alles met nepprovider; geen echte API-aanroep of kosten.
 - `npm run knowledge:check` geslaagd op het echte PLAYBOOK.md. Een eerste, te losse lintregel (elke "niet" schakelde de controle uit) is aangescherpt met regressietests.
 - Niet geverifieerd: modelkeuze tegen echte promptkwaliteit/kosten, `retrieveContext` in een echte promptketen.
+
+## Versie 0.9 — GLB-import (19 oktober 2026)
+
+- Nieuwe Node-tests: assets (13), package (+3). Gebruiken echte GLB's uit de Three.js-exporter; containerfouten met handgebouwde GLB's.
+- e2e (2 nieuw): import met eenhedenkeuze en verplichte herkomst, decoratief buiten de Excel-onderdelenbladen, herstel na herladen uit IndexedDB, en pakketroundtrip na het wissen van de assetopslag.
+- Handmatig bekeken in Chrome: model verschijnt op de vloer met eigen kleuren; bibliotheeklay-out had een overlap die is hersteld.
+- Niet geverifieerd: grote modellen/prestaties, modellen met textures in de browser, Safari/Firefox, IndexedDB-quota.

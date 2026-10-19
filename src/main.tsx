@@ -74,6 +74,7 @@ import {
   childGroupForObject,
   removeObjects,
   bom,
+  decorativeCount,
   bomCsv,
   serialize,
   parseProject,
@@ -87,6 +88,8 @@ import { SceneTree } from "./SceneTree";
 import { AlignmentPanel, MeasurementPanel } from "./SpatialTools";
 import { MediaPanel } from "./MediaPanel";
 import { RenderPanel } from "./RenderPanel";
+import { AssetPanel } from "./AssetPanel";
+import { assetRegistry } from "./assets";
 import { MediaRuntime } from "./mediaRuntime";
 import { applyAlignmentPreview, removeConnection } from "./spatial";
 import type { AlignmentPreview } from "./spatial";
@@ -287,6 +290,7 @@ function App() {
       | "align"
       | "media"
       | "render"
+      | "asset"
     >(null),
     [toast, setToast] = useState(""),
     [saved, setSaved] = useState(true),
@@ -308,6 +312,10 @@ function App() {
       project: () => JSON.parse(JSON.stringify(pRef.current)),
       boxes: () => api.current?.screenBoxes() ?? [],
       selected: () => [...selectedRef.current],
+      assetsLoaded: () =>
+        pRef.current.definitions.flatMap((d) =>
+          d.asset ? [[d.asset.sha256, assetRegistry.has(d.asset.sha256)]] : [],
+        ),
     };
     return () => {
       delete (window as any).__studio;
@@ -315,6 +323,11 @@ function App() {
   }, []);
   const selectedRef = useRef<string[]>([]);
   selectedRef.current = selected;
+  const [assetVersion, setAssetVersion] = useState(0);
+  useEffect(
+    () => assetRegistry.subscribe(() => setAssetVersion(assetRegistry.version)),
+    [],
+  );
   const [vrState, setVrState] = useState<VrState>("unsupported");
   useEffect(
     () => mediaRuntime.subscribe(() => setMediaVersion(mediaRuntime.version)),
@@ -356,6 +369,12 @@ function App() {
     setMeasurePoints([]);
     setAlignmentPreview(null);
   }, [p.id]);
+  const assetKey = p.definitions
+    .flatMap((d) => (d.asset ? [d.asset.sha256] : []))
+    .join(",");
+  useEffect(() => {
+    if (assetKey) void assetRegistry.ensure(assetKey.split(","));
+  }, [assetKey]);
   const announce = (m: string) => setToast(m);
   useEffect(() => {
     if (!toast) return;
@@ -546,6 +565,8 @@ function App() {
         const { readPackage } = await import("./projectPackage");
         const pkg = await readPackage(new Uint8Array(await f.arrayBuffer()));
         next = pkg.project;
+        for (const [sha, data] of pkg.assets)
+          await assetRegistry.add(sha, data.slice().buffer, true);
         note = [
           "Pakket gecontroleerd (controlesommen kloppen)",
           ...pkg.warnings,
@@ -726,6 +747,14 @@ function App() {
       const zip = await buildPackage(p, {
         glb: new Uint8Array(await glbBytes(p, false)),
         xlsx: new Uint8Array(await e.xlsxBytes(p)),
+        assets: new Map(
+          p.definitions.flatMap((d) => {
+            const bytes = d.asset && assetRegistry.bytesFor(d.asset.sha256);
+            return d.asset && bytes
+              ? [[d.asset.sha256, new Uint8Array(bytes)] as const]
+              : [];
+          }),
+        ),
       });
       saveBytes("boormester-pakket.zip", zip, "application/zip");
       announce("Projectpakket gedownload · controlesommen in manifest.json");
@@ -1177,55 +1206,120 @@ function App() {
             </label>
             {tab === "library" ? (
               <>
-                <div className="section-heading">
-                  DEMO-COLLECTIE <span>{CATALOG.length} onderdelen</span>
-                </div>
-                <div className="catalog-list">
-                  {CATALOG.filter((d) =>
-                    d.name.toLowerCase().includes(search.toLowerCase()),
-                  ).map((d) => (
-                    <button
-                      className="catalog-card"
-                      key={d.id}
-                      disabled={readOnly || contextLocked}
-                      onClick={() => {
-                        const o = newInstance(p, d.id);
-                        if (editGroupId) o.groupId = editGroupId;
-                        change((q) => ({ ...q, objects: [...q.objects, o] }));
-                        setSelected([o.id]);
-                        setTool("move");
-                      }}
-                    >
-                      <span className={"part-preview " + d.kind}>
-                        <i />
-                        <b />
-                        <em />
-                      </span>
-                      <span className="part-copy">
-                        <strong>{d.name}</strong>
-                        <small>
-                          {d.size.x} × {d.size.y} × {d.size.z} cm
-                        </small>
-                        <span>
-                          {d.kind === "panel"
-                            ? "Projectie"
-                            : d.kind === "table" || d.kind === "projector"
-                              ? "Inrichting"
-                              : "Constructie"}
+                <div className="library-scroll">
+                  <div className="section-heading">
+                    DEMO-COLLECTIE <span>{CATALOG.length} onderdelen</span>
+                  </div>
+                  <div className="catalog-list">
+                    {CATALOG.filter((d) =>
+                      d.name.toLowerCase().includes(search.toLowerCase()),
+                    ).map((d) => (
+                      <button
+                        className="catalog-card"
+                        key={d.id}
+                        disabled={readOnly || contextLocked}
+                        onClick={() => {
+                          const o = newInstance(p, d.id);
+                          if (editGroupId) o.groupId = editGroupId;
+                          change((q) => ({ ...q, objects: [...q.objects, o] }));
+                          setSelected([o.id]);
+                          setTool("move");
+                        }}
+                      >
+                        <span className={"part-preview " + d.kind}>
+                          <i />
+                          <b />
+                          <em />
                         </span>
-                      </span>
-                      <span className="add-part">
-                        <Plus size={15} />
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <div className="library-footnote">
-                  <CircleDot size={14} />
-                  <p>
-                    Synthetische onderdelen voor ontwerp en demonstratie. Geen
-                    fabrikantcatalogus of constructieberekening.
-                  </p>
+                        <span className="part-copy">
+                          <strong>{d.name}</strong>
+                          <small>
+                            {d.size.x} × {d.size.y} × {d.size.z} cm
+                          </small>
+                          <span>
+                            {d.kind === "panel"
+                              ? "Projectie"
+                              : d.kind === "table" || d.kind === "projector"
+                                ? "Inrichting"
+                                : "Constructie"}
+                          </span>
+                        </span>
+                        <span className="add-part">
+                          <Plus size={15} />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="section-heading">
+                    GEÏMPORTEERD{" "}
+                    <span>
+                      {
+                        p.definitions.filter((d) => d.source === "imported")
+                          .length
+                      }{" "}
+                      modellen
+                    </span>
+                  </div>
+                  <button
+                    className="button full"
+                    disabled={readOnly}
+                    onClick={() => setModal("asset")}
+                  >
+                    <Plus size={14} /> GLB-model importeren
+                  </button>
+                  <div className="catalog-list">
+                    {p.definitions
+                      .filter(
+                        (d) =>
+                          d.source === "imported" &&
+                          d.name.toLowerCase().includes(search.toLowerCase()),
+                      )
+                      .map((d) => (
+                        <button
+                          className="catalog-card"
+                          key={d.id}
+                          disabled={readOnly || contextLocked}
+                          onClick={() => {
+                            const o = newInstance(p, d.id);
+                            if (editGroupId) o.groupId = editGroupId;
+                            change((q) => ({
+                              ...q,
+                              objects: [...q.objects, o],
+                            }));
+                            setSelected([o.id]);
+                            setTool("move");
+                          }}
+                        >
+                          <span className="part-preview asset">
+                            <i />
+                            <b />
+                            <em />
+                          </span>
+                          <span className="part-copy">
+                            <strong>{d.name}</strong>
+                            <small>
+                              {d.size.x} × {d.size.y} × {d.size.z} cm ·{" "}
+                              {d.catalogId}
+                            </small>
+                            <span>
+                              {d.decorative
+                                ? "Decoratief · buiten BOM"
+                                : "Geïmporteerd · niet geverifieerd"}
+                            </span>
+                          </span>
+                          <span className="add-part">
+                            <Plus size={15} />
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                  <div className="library-footnote">
+                    <CircleDot size={14} />
+                    <p>
+                      Synthetische onderdelen voor ontwerp en demonstratie. Geen
+                      fabrikantcatalogus of constructieberekening.
+                    </p>
+                  </div>
                 </div>
               </>
             ) : (
@@ -1301,6 +1395,7 @@ function App() {
             preset={preset}
             media={mediaRuntime}
             onVrChange={setVrState}
+            assetVersion={assetVersion}
             mediaVersion={mediaVersion}
             snap={snap}
             freeHeight={freeHeight}
@@ -1753,7 +1848,14 @@ function App() {
                         disabled={locked}
                         onCommit={(name) => updateOne((o) => (o.name = name))}
                       />
-                      <small>{def!.catalogId} · synthetisch</small>
+                      <small>
+                        {def!.catalogId} ·{" "}
+                        {def!.source === "imported"
+                          ? def!.decorative
+                            ? "geïmporteerd · decoratief · niet geverifieerd"
+                            : "geïmporteerd · niet geverifieerd"
+                          : "synthetisch"}
+                      </small>
                     </div>
                   </div>
                   <div className="property-section">
@@ -2071,7 +2173,10 @@ function App() {
               <span>
                 Onderdelenlijst
                 <small>
-                  {p.objects.length} exemplaren · {counts.length} regels
+                  {p.objects.length - decorativeCount(p)} exemplaren ·{" "}
+                  {counts.length} regels
+                  {decorativeCount(p) > 0 &&
+                    ` · +${decorativeCount(p)} decoratief`}
                 </small>
               </span>
               <ChevronRight size={16} />
@@ -2136,7 +2241,8 @@ function App() {
               modal === "server" ||
               modal === "ai" ||
               modal === "media" ||
-              modal === "render"
+              modal === "render" ||
+              modal === "asset"
                 ? "wide"
                 : "")
             }
@@ -2145,23 +2251,25 @@ function App() {
             aria-label={
               modal === "align"
                 ? "Demo-uitlijnvlakken verbinden"
-                : modal === "render"
-                  ? "Blender-renderwachtrij"
-                  : modal === "media"
-                    ? "Media en projectiecanvas"
-                    : modal === "server"
-                      ? "Serverprojecten en revisies"
-                      : modal === "ai"
-                        ? "Ontwerpen met Claude"
-                        : modal === "bom"
-                          ? "Onderdelenlijst"
-                          : modal === "room"
-                            ? "Ruimteafmetingen"
-                            : modal === "versions"
-                              ? "Versiegeschiedenis"
-                              : modal === "new"
-                                ? "Nieuw ontwerp"
-                                : "Bediening en informatie"
+                : modal === "asset"
+                  ? "GLB-model importeren"
+                  : modal === "render"
+                    ? "Blender-renderwachtrij"
+                    : modal === "media"
+                      ? "Media en projectiecanvas"
+                      : modal === "server"
+                        ? "Serverprojecten en revisies"
+                        : modal === "ai"
+                          ? "Ontwerpen met Claude"
+                          : modal === "bom"
+                            ? "Onderdelenlijst"
+                            : modal === "room"
+                              ? "Ruimteafmetingen"
+                              : modal === "versions"
+                                ? "Versiegeschiedenis"
+                                : modal === "new"
+                                  ? "Nieuw ontwerp"
+                                  : "Bediening en informatie"
             }
             onClick={(e) => e.stopPropagation()}
           >
@@ -2184,6 +2292,19 @@ function App() {
                   setTool("select");
                   setMeasurePoints([]);
                 }}
+              />
+            )}
+            {modal === "asset" && (
+              <AssetPanel
+                project={p}
+                readOnly={readOnly}
+                onAdd={(def) =>
+                  change((q) => ({
+                    ...q,
+                    definitions: [...q.definitions, def],
+                  }))
+                }
+                onMessage={announce}
               />
             )}
             {modal === "render" && (
@@ -2316,8 +2437,11 @@ function App() {
                 <span className="eyebrow">SCÈNE → ONDERDELEN</span>
                 <h2>Onderdelenlijst</h2>
                 <p>
-                  {p.objects.length} exemplaren, gegroepeerd op definitie,
-                  materiaal en groep. Verborgen onderdelen tellen ook mee.
+                  {p.objects.length - decorativeCount(p)} structurele
+                  exemplaren, gegroepeerd op definitie, materiaal en groep.
+                  Verborgen onderdelen tellen ook mee.
+                  {decorativeCount(p) > 0 &&
+                    ` ${decorativeCount(p)} decoratieve objecten staan bewust buiten deze lijst (zie het blad Decoratief in de Excel-export).`}
                 </p>
                 <div className="table-scroll">
                   <table>

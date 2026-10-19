@@ -2804,3 +2804,23 @@ tfoot td {
 .render-job .button {
   justify-self: start;
 }
+.part-preview.asset i,
+.part-preview.asset b,
+.part-preview.asset em {
+  background: #e0b36a;
+}
+.library-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+  scrollbar-width: thin;
+}
+.library-scroll .catalog-list {
+  overflow: visible;
+  flex: none;
+}
+.library-scroll .button.full {
+  margin: 8px 12px;
+}

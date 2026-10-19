@@ -2,6 +2,8 @@ import ExcelJS from "exceljs";
 import { jsPDF } from "jspdf";
 import {
   bom,
+  decorativeCount,
+  statusOf,
   definition,
   effectiveMaterial,
   MATERIALS,
@@ -16,7 +18,12 @@ export function buildWorkbook(p: Project) {
   wb.creator = "Boormester Immersive Studio";
   wb.created = new Date(p.updatedAt);
   wb.title = p.name;
-  wb.subject = "Synthetische demo-onderdelen; geen fabrikantcatalogus";
+  const imported = p.definitions.filter((d) => d.source === "imported");
+  wb.subject = imported.length
+    ? "Synthetische demo-onderdelen en geïmporteerde modellen (niet geverifieerd); geen fabrikantcatalogus"
+    : "Synthetische demo-onderdelen; geen fabrikantcatalogus";
+  const structural = p.objects.filter((o) => !definition(p, o).decorative),
+    decorative = p.objects.filter((o) => definition(p, o).decorative);
   const summary = wb.addWorksheet("Onderdelen");
   summary.columns = [
     { header: "Code", key: "code", width: 19 },
@@ -43,10 +50,10 @@ export function buildWorkbook(p: Project) {
   );
   const lastData = summary.rowCount;
   const total = summary.addRow({
-    description: "Totaal exemplaren",
+    description: "Totaal exemplaren (structureel, zonder decoratief)",
     quantity:
       lastData > 1
-        ? { formula: `SUM(D2:D${lastData})`, result: p.objects.length }
+        ? { formula: `SUM(D2:D${lastData})`, result: structural.length }
         : 0,
   });
   total.font = { bold: true };
@@ -70,9 +77,12 @@ export function buildWorkbook(p: Project) {
     { header: "Zichtbaar object", key: "visible", width: 20 },
     { header: "Status", key: "status", width: 28 },
   ];
-  for (const o of p.objects) {
+  const addInstance = (
+    sheet: ExcelJS.Worksheet,
+    o: (typeof p.objects)[number],
+  ) => {
     const d = definition(p, o);
-    detail.addRow({
+    sheet.addRow({
       ...o,
       px: o.position.x,
       py: o.position.y,
@@ -86,8 +96,60 @@ export function buildWorkbook(p: Project) {
       group: p.groups.find((g) => g.id === o.groupId)?.name ?? "",
       tag: p.tags.find((t) => t.id === o.tag)?.name ?? o.tag,
       visible: o.visible ? "Ja" : "Nee",
-      status: d.unique ? "Synthetisch - uniek" : "Synthetische demo",
+      status: d.decorative ? "Decoratief · buiten BOM" : statusOf(d),
     });
+  };
+  structural.forEach((o) => addInstance(detail, o));
+  const sheets: ExcelJS.Worksheet[] = [summary, detail];
+  // Decorative objects are never counted as structural parts, but they stay visible in their own sheet.
+  let decorativeRows = 0;
+  if (decorative.length) {
+    const decorativeSheet = wb.addWorksheet("Decoratief");
+    decorativeSheet.columns = detail.columns.map((c) => ({
+      header: String(c.header),
+      key: String(c.key),
+      width: c.width,
+    }));
+    decorative.forEach((o) => addInstance(decorativeSheet, o));
+    decorativeRows = decorativeSheet.rowCount - 1;
+    sheets.push(decorativeSheet);
+  }
+  if (imported.length) {
+    const importedSheet = wb.addWorksheet("Geïmporteerd");
+    importedSheet.columns = [
+      { header: "Code", key: "code", width: 16 },
+      { header: "Naam", key: "name", width: 32 },
+      { header: "Rol", key: "role", width: 24 },
+      { header: "Status", key: "status", width: 32 },
+      { header: "Lengte (cm)", key: "x", width: 14 },
+      { header: "Hoogte (cm)", key: "y", width: 14 },
+      { header: "Diepte (cm)", key: "z", width: 14 },
+      { header: "Eenheden in bestand", key: "units", width: 20 },
+      { header: "Driehoeken", key: "triangles", width: 14 },
+      { header: "Herkomst", key: "provenance", width: 50 },
+      { header: "Licentie", key: "license", width: 40 },
+      { header: "Bestand", key: "file", width: 30 },
+      { header: "SHA-256", key: "sha", width: 68 },
+    ];
+    for (const d of imported)
+      importedSheet.addRow({
+        code: d.catalogId,
+        name: d.name,
+        role: d.decorative
+          ? "Decoratief (buiten BOM)"
+          : "Eigen onderdeel (in BOM)",
+        status: statusOf(d),
+        x: d.size.x,
+        y: d.size.y,
+        z: d.size.z,
+        units: d.asset?.units,
+        triangles: d.asset?.triangles,
+        provenance: d.asset?.provenance,
+        license: d.asset?.license ?? "niet opgegeven",
+        file: d.asset?.fileName,
+        sha: d.asset?.sha256,
+      });
+    sheets.push(importedSheet);
   }
   const meta = wb.addWorksheet("Project");
   meta.columns = [
@@ -104,8 +166,14 @@ export function buildWorkbook(p: Project) {
     { key: "Ruimte hoogte Y", value: p.room.height },
     { key: "Exemplaren", value: p.objects.length },
     {
+      key: "Telling",
+      value: `Structureel: ${structural.length} · Decoratief: ${decorative.length} · Scène: ${p.objects.length}`,
+    },
+    {
       key: "Herkomst",
-      value: "Proceduraal gegenereerde synthetische demo-onderdelen",
+      value: imported.length
+        ? "Synthetische demo-onderdelen en geïmporteerde GLB-modellen (blad Geïmporteerd); geïmporteerd is niet geverifieerd"
+        : "Proceduraal gegenereerde synthetische demo-onderdelen",
     },
     {
       key: "Constructieve status",
@@ -121,7 +189,8 @@ export function buildWorkbook(p: Project) {
       value: validate(p).filter((i) => i.severity === "error").length,
     },
   ].forEach((r) => meta.addRow(r));
-  for (const sheet of [summary, detail, meta]) {
+  sheets.push(meta);
+  for (const sheet of sheets) {
     sheet.views = [{ state: "frozen", ySplit: 1 }];
     sheet.getRow(1).height = 25;
     sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -155,7 +224,12 @@ export function buildWorkbook(p: Project) {
   }
   // Reconciliation before returning any workbook.
   const count = bom(p).reduce((n, r) => n + r.quantity, 0);
-  if (count !== p.objects.length || detail.rowCount - 1 !== p.objects.length)
+  if (
+    count !== structural.length ||
+    detail.rowCount - 1 !== structural.length ||
+    decorativeRows !== decorativeCount(p) ||
+    structural.length + decorative.length !== p.objects.length
+  )
     throw Error("Onderdelenexport wijkt af van de scene.");
   return wb;
 }

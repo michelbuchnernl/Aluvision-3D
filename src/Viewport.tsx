@@ -47,6 +47,7 @@ interface Props {
   media?: MediaRuntime;
   onVrChange?: (state: VrState) => void;
   mediaVersion?: number;
+  assetVersion?: number;
   snap: number;
   freeHeight: boolean;
   contextId: string | null;
@@ -903,6 +904,7 @@ export default function Viewport(props: Props) {
     props.tool,
     props.preset,
     props.mediaVersion,
+    props.assetVersion,
     props.snap,
     props.freeHeight,
     props.contextId,

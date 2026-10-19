@@ -133,3 +133,84 @@ test("a package of a plain demo project reimports into a project the editor acce
   assert.equal(r.project.id, p.id);
   assert.equal(r.project.canvases, undefined);
 });
+
+import * as THREE from "three";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import { importedDefinition, inspectGlb } from "../src/assetImport.ts";
+import { assetRegistry, sha256OfBytes } from "../src/assets.ts";
+async function withAsset() {
+  const scene = new THREE.Scene();
+  scene.add(
+    new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial(),
+    ),
+  );
+  const bytes = new Uint8Array(
+    await new GLTFExporter().parseAsync(scene, { binary: true }),
+  );
+  const sha = await sha256OfBytes(bytes);
+  const ins = await assetRegistry.add(sha, bytes.buffer.slice(0), false);
+  const p = demoProject();
+  p.definitions.push(
+    importedDefinition(
+      "imp-1",
+      {
+        name: "Kist",
+        units: "m",
+        role: "decorative",
+        provenance: "Eigen model",
+      },
+      ins,
+      { sha256: sha, bytes: bytes.length, fileName: "kist.glb" },
+    ),
+  );
+  return { p, bytes, sha };
+}
+const build = async (p, assets) =>
+  buildPackage(p, {
+    glb: new Uint8Array(await glbBytes(p)),
+    xlsx: new Uint8Array(await xlsxBytes(p)),
+    assets,
+  });
+
+test("imported models travel inside the package, content-addressed and verified on reimport", async () => {
+  const { p, bytes, sha } = await withAsset();
+  const zip = await build(p, new Map([[sha, bytes]]));
+  const r = await readPackage(zip);
+  assert.deepEqual([...r.assets.keys()], [sha]);
+  assert.equal(await sha256Hex(r.assets.get(sha)), sha);
+  assert.ok(r.manifest.files.some((f) => f.path === `assets/${sha}.glb`));
+  assert.deepEqual(r.manifest.assetsMissing, []);
+  assert.deepEqual(r.warnings, []);
+  assert.match(r.manifest.notes.join(" "), /niet geverifieerd/);
+});
+
+test("a package made without the model bytes says so on both ends", async () => {
+  const { p, sha } = await withAsset();
+  const zip = await build(p, new Map());
+  const r = await readPackage(zip);
+  assert.deepEqual(r.manifest.assetsMissing, [sha]);
+  assert.match(r.warnings.join(" "), /niet in het pakket/);
+  assert.equal(r.assets.size, 0);
+});
+
+test("a changed or mis-named model file is refused", async () => {
+  const { p, bytes, sha } = await withAsset();
+  const zip = await build(p, new Map([[sha, bytes]]));
+  const flipped = tamper(zip, (f) => {
+    const g = new Uint8Array(f[`assets/${sha}.glb`]);
+    g[g.length - 1] ^= 1;
+    f[`assets/${sha}.glb`] = g;
+  });
+  await assert.rejects(readPackage(flipped), /controlesom van assets/);
+  // Consistent manifest, but the bytes do not hash to the file name: content addressing catches it.
+  const other = new Uint8Array(bytes);
+  other[other.length - 1] ^= 1;
+  await assert.rejects(
+    readPackage(await build(p, new Map([[sha, other]]))),
+    /past niet bij zijn eigen controlesom/,
+  );
+  const stray = tamper(zip, (f) => (f["assets/notahash.glb"] = bytes));
+  await assert.rejects(readPackage(stray), /onverwacht/);
+});

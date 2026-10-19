@@ -1,10 +1,13 @@
 import * as THREE from "three";
 import type { Definition } from "./model.ts";
+import { assetRegistry } from "./assets.ts";
+import { normalizeAsset } from "./assetImport.ts";
 /** Procedural demo geometry. Every visible primitive stays inside the declared physical envelope. */
 export function createPart(
   d: Definition,
   material: THREE.Material,
 ): THREE.Group {
+  if (d.source === "imported") return importedPart(d);
   const s = d.size,
     g = new THREE.Group();
   const cube = (
@@ -79,4 +82,41 @@ export function createPart(
     }
   }
   return g;
+}
+
+/** Imported GLB: normalised to bottom-centre in cm and stretched to the declared size, so bounds stay exact. */
+function importedPart(d: Definition): THREE.Group {
+  const src = d.asset && assetRegistry.get(d.asset.sha256);
+  const out = new THREE.Group();
+  if (!src || !d.asset) {
+    // Missing bytes: an orange wire box of the declared size, never an invisible object.
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(d.size.x, d.size.y, d.size.z),
+      new THREE.MeshBasicMaterial({ color: "#e59630", wireframe: true }),
+    );
+    box.position.y = d.size.y / 2;
+    out.add(box);
+    out.userData.assetMissing = true;
+    return out;
+  }
+  const model = normalizeAsset(src, d.asset.units);
+  const native = new THREE.Box3()
+    .setFromObject(model, true)
+    .getSize(new THREE.Vector3());
+  model.scale.multiply(
+    new THREE.Vector3(
+      d.size.x / native.x,
+      d.size.y / native.y,
+      d.size.z / native.z,
+    ),
+  );
+  model.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+  });
+  out.add(model);
+  return out;
 }

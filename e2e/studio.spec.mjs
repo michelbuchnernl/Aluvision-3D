@@ -311,3 +311,131 @@ test("package with a flipped byte is refused and leaves the project untouched", 
   ).toBeVisible();
   expect((await project(page)).objects).toHaveLength(before.objects.length);
 });
+
+import * as THREE from "three";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import ExcelJS from "exceljs";
+globalThis.FileReader ??= class {
+  readAsArrayBuffer(blob) {
+    blob.arrayBuffer().then((b) => {
+      this.result = b;
+      this.onloadend?.();
+    });
+  }
+};
+const makeGlb = async () => {
+  const scene = new THREE.Scene();
+  scene.add(
+    new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 1.2, 0.4),
+      new THREE.MeshStandardMaterial({ color: "#c0392b" }),
+    ),
+  );
+  return Buffer.from(
+    await new GLTFExporter().parseAsync(scene, { binary: true }),
+  );
+};
+
+test("GLB import: unit-explicit, provenance required, decorative stays out of the BOM, survives reload", async ({
+  page,
+}) => {
+  await open(page);
+  const baseline = (await project(page)).objects.length;
+  await page.getByRole("button", { name: /GLB-model importeren/ }).click();
+  const modal = page.getByRole("dialog");
+  await modal.locator("input[type=file]").setInputFiles({
+    name: "kast.glb",
+    mimeType: "model/gltf-binary",
+    buffer: await makeGlb(),
+  });
+  await expect(modal.getByText(/12 driehoeken/)).toBeVisible();
+  await expect(modal.getByText(/60\.0 × 120\.0 × 40\.0 cm/)).toBeVisible();
+  // Without a provenance the model cannot be added.
+  const add = modal.getByRole("button", { name: /Model toevoegen/ });
+  await expect(add).toBeDisabled();
+  await modal.getByPlaceholder(/eigen model/i).fill("Eigen testmodel");
+  await expect(add).toBeEnabled();
+  // The unit choice is real: centimetres shrinks the part 100x and warns about an implausible size.
+  await modal.getByRole("combobox").first().selectOption("cm");
+  await expect(modal.getByText(/0\.6 × 1\.2 × 0\.4 cm/)).toBeVisible();
+  await expect(modal.getByText(/kleiner dan 1 cm/)).toBeVisible();
+  await modal.getByRole("combobox").first().selectOption("m");
+  await add.click();
+  await page.getByRole("button", { name: "Dialoog sluiten" }).click();
+  await page.locator(".catalog-card", { hasText: "kast" }).click();
+  let p = await project(page);
+  const def = p.definitions.find((d) => d.source === "imported");
+  expect(def).toMatchObject({
+    kind: "asset",
+    decorative: true,
+    size: { x: 60, y: 120, z: 40 },
+  });
+  expect(def.catalogId).toMatch(/^IMP-[0-9A-F]{8}$/);
+  expect(def.asset.provenance).toBe("Eigen testmodel");
+  expect(p.objects).toHaveLength(baseline + 1);
+  expect(await page.evaluate(() => window.__studio.assetsLoaded())).toEqual([
+    [def.asset.sha256, true],
+  ]);
+
+  // Excel: decorative part is not in the structural sheets, but listed on its own sheet.
+  await page.getByLabel("Exporteer ontwerp").click();
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Excel-onderdelenlijst/ }).click();
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(await (await dl).path());
+  const cells = (name) =>
+    JSON.stringify(wb.getWorksheet(name).getSheetValues());
+  expect(cells("Onderdelen")).not.toContain("kast");
+  expect(cells("Exemplaren")).not.toContain("kast");
+  expect(cells("Decoratief")).toContain("kast");
+  expect(cells("Geïmporteerd")).toContain("Eigen testmodel");
+  expect(wb.getWorksheet("Exemplaren").rowCount - 1).toBe(baseline);
+
+  // Reload: the model comes back from IndexedDB, not as an orange placeholder.
+  await page.waitForTimeout(1200);
+  await page.reload();
+  await page.waitForFunction(() => window.__studio?.boxes().length > 0);
+  await expect
+    .poll(() => page.evaluate(() => window.__studio.assetsLoaded()))
+    .toEqual([[def.asset.sha256, true]]);
+});
+
+test("imported model can travel in a package and come back after the asset store is cleared", async ({
+  page,
+}) => {
+  await open(page);
+  await page.getByRole("button", { name: /GLB-model importeren/ }).click();
+  const modal = page.getByRole("dialog");
+  await modal.locator("input[type=file]").setInputFiles({
+    name: "kast.glb",
+    mimeType: "model/gltf-binary",
+    buffer: await makeGlb(),
+  });
+  await modal.getByPlaceholder(/eigen model/i).fill("Eigen testmodel");
+  await modal.getByRole("button", { name: /Model toevoegen/ }).click();
+  await page.getByRole("button", { name: "Dialoog sluiten" }).click();
+  await page.locator(".catalog-card", { hasText: "kast" }).click();
+  await page.getByLabel("Exporteer ontwerp").click();
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Projectpakket/ }).click();
+  const zipPath = await (await dl).path();
+  const before = await project(page);
+  // Forget the bytes everywhere, then reimport the package.
+  await page.evaluate(async () => {
+    await new Promise((r) => {
+      const req = indexedDB.deleteDatabase("boormester-assets");
+      req.onsuccess = req.onerror = req.onblocked = () => r();
+    });
+  });
+  await page.getByRole("button", { name: "Nieuw / demo" }).click();
+  await page.getByRole("button", { name: /Lege ruimte/ }).click();
+  await expect.poll(async () => (await project(page)).objects.length).toBe(0);
+  await page.locator("input[type=file][accept*='.zip']").setInputFiles(zipPath);
+  await expect
+    .poll(async () => (await project(page)).objects.length)
+    .toBe(before.objects.length);
+  const sha = before.definitions.find((d) => d.asset).asset.sha256;
+  await expect
+    .poll(() => page.evaluate(() => window.__studio.assetsLoaded()))
+    .toEqual([[sha, true]]);
+});

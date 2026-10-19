@@ -1,4 +1,4 @@
-# Bouwstatus — versie 0.8
+# Bouwstatus — versie 0.9
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -53,6 +53,13 @@
 - **Playbook-bewaking:** `npm run knowledge:check` weigert tested/verified-claims zonder bestaand bewijsbestand; nieuwe regels uit deze sessie toegevoegd.
 - 15 nieuwe tests (137).
 
+## Toegevoegd in versie 0.9 (GLB-import)
+
+- **GLB-import als catalogusadapter:** bestandscontrole, expliciete eenheden, verplichte herkomst, status "geïmporteerd, niet geverifieerd", IMP-code, normalisatie naar midden-onderzijde in cm. Zie docs/ASSETS.md.
+- **Decoratief blijft buiten de BOM** (eigen Excel-blad en telling, reconciliatie structureel + decoratief = scène); eigen onderdelen staan wel in de BOM met ongeverifieerde status.
+- Content-addressed opslag (IndexedDB) en transport in het projectpakket; ontbrekende modellen = oranje draadkader, export en render weigeren.
+- 16 nieuwe Node-tests en 2 e2e-tests (153 / 10).
+
 ## Bewijs
 
 81 tests slagen, inclusief client → echte HTTP → fake Claude → preview → revisie, CLI-start/herstart, proceslock, budgetconcurrency, hiërarchie, uitlijning, meten en echte GLB-roundtrips. TypeScript/productie-build, formatter, diff-whitespacecontrole slagen. Productieaudit meldt 0 kwetsbaarheden. Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen WebGL/UI/Safari-acceptatie geclaimd. Zie TEST_RESULTS.
@@ -76,7 +83,7 @@ Editor: http://localhost:4173. API: 8787. Productie: `npm run build` en `npm sta
 ## Vervolg naar volledige specificatie
 
 1. Resterende MANUAL_QA-punten buiten de e2e-dekking, plus visuele regressie met referentiebeelden.
-2. Catalogusadapters, gedeelde assembly-definities, socket-editor en magnetische sleep-snapping.
+2. Gedeelde assembly-definities, socket-editor en magnetische sleep-snapping; serveropslag van modellen; andere importformaten.
 3. Echte headset-/emulatorcontrole van VR; media-export in projectpakket; schermafbeelding-/regressielus.
 4. Eerste echte Blender-run (docs/BLENDER.md), GLB-import/assetpackage, media-bestanden in het pakket.
 5. Modelroutering/kennisdistillatie en volledige referentieacceptatie.

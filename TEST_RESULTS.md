@@ -109,3 +109,10 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - e2e (2 nieuw): import met eenhedenkeuze en verplichte herkomst, decoratief buiten de Excel-onderdelenbladen, herstel na herladen uit IndexedDB, en pakketroundtrip na het wissen van de assetopslag.
 - Handmatig bekeken in Chrome: model verschijnt op de vloer met eigen kleuren; bibliotheeklay-out had een overlap die is hersteld.
 - Niet geverifieerd: grote modellen/prestaties, modellen met textures in de browser, Safari/Firefox, IndexedDB-quota.
+
+## Versie 1.0 — assembly's (19 oktober 2026)
+
+- tests/assemblies.test.mjs (15, incl. serveropslag en revisieherstel): gesloten-vorm-posities bij plaatsen met draaiing, rigide verplaatsing/draaiing is geen afwijking, afwijkingen benoemd, reset/apply/unique, weigeringen, validatie, groepsbewerkingen.
+- e2e: opslaan, tweede exemplaar plaatsen, lid verwijderen, afwijking tonen, terugzetten, uniek maken, herstel na herladen.
+- Een eerste e2e-fout kwam doordat een scripted wijziging na formattering niet was toegepast (selectieherstel); daarna daadwerkelijk toegepast en getest.
+- Niet geverifieerd: grote assembly's/prestaties, samenspel met AI-voorstellen, serveropslag-roundtrip met assembly's in de browser.

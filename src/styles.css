@@ -2824,3 +2824,10 @@ tfoot td {
 .library-scroll .button.full {
   margin: 8px 12px;
 }
+.assembly-section .button.full {
+  margin-top: 6px;
+}
+.assembly-section .media-issue:not(.warning) {
+  background: #e8f4ee;
+  color: #25594a;
+}

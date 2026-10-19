@@ -89,6 +89,7 @@ import { AlignmentPanel, MeasurementPanel } from "./SpatialTools";
 import { MediaPanel } from "./MediaPanel";
 import { RenderPanel } from "./RenderPanel";
 import { AssetPanel } from "./AssetPanel";
+import { AssemblyInspector, AssemblyLibrary } from "./AssemblyPanel";
 import { assetRegistry } from "./assets";
 import { MediaRuntime } from "./mediaRuntime";
 import { applyAlignmentPreview, removeConnection } from "./spatial";
@@ -1313,6 +1314,16 @@ function App() {
                         </button>
                       ))}
                   </div>
+                  <AssemblyLibrary
+                    project={p}
+                    readOnly={readOnly || contextLocked}
+                    onChange={change}
+                    onMessage={announce}
+                    onPlaced={(ids) => {
+                      setSelected(ids);
+                      setTool("move");
+                    }}
+                  />
                   <div className="library-footnote">
                     <CircleDot size={14} />
                     <p>
@@ -1725,6 +1736,19 @@ function App() {
                             Bewerk groep
                           </button>
                         </div>
+                      )}
+                      {selectedGroup && (
+                        <AssemblyInspector
+                          key={
+                            selectedGroup.id + (selectedGroup.assemblyId ?? "")
+                          }
+                          project={p}
+                          group={selectedGroup}
+                          readOnly={readOnly || selectionLocked}
+                          onChange={change}
+                          onMessage={announce}
+                          onSelect={setSelected}
+                        />
                       )}
                       <button
                         className="button"

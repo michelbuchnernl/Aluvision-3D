@@ -1,4 +1,4 @@
-# Bouwstatus — versie 0.9
+# Bouwstatus — versie 1.0
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -59,6 +59,12 @@
 - **Decoratief blijft buiten de BOM** (eigen Excel-blad en telling, reconciliatie structureel + decoratief = scène); eigen onderdelen staan wel in de BOM met ongeverifieerde status.
 - Content-addressed opslag (IndexedDB) en transport in het projectpakket; ontbrekende modellen = oranje draadkader, export en render weigeren.
 - 16 nieuwe Node-tests en 2 e2e-tests (153 / 10).
+
+## Toegevoegd in versie 1.0 (gedeelde assembly-definities)
+
+- Groepen opslaan als assembly, exemplaren plaatsen vanuit de bibliotheek, afwijkingen meten, **toepassen op definitie** (gelijke exemplaren volgen, afwijkende/vergrendelde worden overgeslagen en gemeld), **terugzetten**, **uniek maken**. Oorsprong en draaiing worden uit de leden afgeleid. Zie docs/ASSEMBLIES.md.
+- Groepsbewerkingen (opheffen, hergroeperen, dupliceren) en projectvalidatie houden assembly-verwijzingen consistent.
+- 15 nieuwe Node-tests en 1 e2e-test (168 / 11).
 
 ## Bewijs
 

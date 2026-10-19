@@ -58,6 +58,8 @@ export interface Instance {
   rotation: number;
   tag: string;
   groupId?: string;
+  /** Links this object to a member of its group's assembly definition. */
+  assemblyKey?: string;
   material?: MaterialId;
   visible: boolean;
   locked: boolean;
@@ -74,6 +76,25 @@ export interface Group {
   parentId?: string;
   visible?: boolean;
   locked?: boolean;
+  /** Set when this group is an instance of a shared assembly definition. */
+  assemblyId?: string;
+}
+/** One part of an assembly, positioned relative to the assembly origin (x/z centre, y = lowest point). */
+export interface AssemblyMember {
+  key: string;
+  definitionId: string;
+  name: string;
+  position: Vec3;
+  rotation: number;
+  tag: string;
+  material?: MaterialId;
+}
+/** Shared definition: every instance group follows it until it is made unique or deliberately deviates. */
+export interface AssemblyDefinition {
+  id: string;
+  name: string;
+  unique?: boolean;
+  members: AssemblyMember[];
 }
 export interface CameraBookmark {
   id: string;
@@ -98,6 +119,7 @@ export interface Project {
   connections?: SceneConnection[];
   media?: MediaAsset[];
   canvases?: ProjectionCanvas[];
+  assemblies?: AssemblyDefinition[];
   updatedAt: string;
 }
 export interface Issue {
@@ -546,8 +568,12 @@ export function duplicate(
     c.position.x += 20;
     c.position.z += 20;
     if (o.groupId && mapping.has(o.groupId)) c.groupId = mapping.get(o.groupId);
-    else if (contextId) c.groupId = contextId;
-    else delete c.groupId;
+    else {
+      // A copy outside a copied assembly group is a plain object, not a second member with the same key.
+      delete c.assemblyKey;
+      if (contextId) c.groupId = contextId;
+      else delete c.groupId;
+    }
     n.objects.push(c);
     result.push(c.id);
   }
@@ -625,7 +651,10 @@ export function group(
   for (const child of children.filter((g) => moved.includes(g.id)))
     child.parentId = id;
   for (const o of eligible) {
-    if (!o.groupId || o.groupId === contextId) o.groupId = id;
+    if (!o.groupId || o.groupId === contextId) {
+      if (o.groupId) delete o.assemblyKey;
+      o.groupId = id;
+    }
   }
   n.groups.push(newGroup);
   return n;
@@ -646,6 +675,7 @@ export function ungroup(
     );
   for (const g of dissolve) {
     for (const o of n.objects.filter((o) => o.groupId === g.id)) {
+      delete o.assemblyKey;
       if (contextId) o.groupId = contextId;
       else delete o.groupId;
     }
@@ -766,6 +796,62 @@ const text = (v: unknown) =>
   typeof v === "string" && v.length > 0 && v.length <= 300;
 const uniqueIds = (a: { id: string }[]) =>
   new Set(a.map((o) => o.id)).size === a.length;
+/** Assembly references must be complete and unique, or the project is refused. */
+function validAssemblies(p: any): AssemblyDefinition[] | undefined {
+  const bad = (): never => {
+    throw Error("Ongeldige assembly of assembly-verwijzing.");
+  };
+  const list = p.assemblies;
+  if (list !== undefined && (!Array.isArray(list) || list.length > 200)) bad();
+  const defs = new Map<string, Set<string>>();
+  for (const a of list ?? []) {
+    if (
+      !a ||
+      !text(a.id) ||
+      !text(a.name) ||
+      a.name.length > 120 ||
+      defs.has(a.id) ||
+      !Array.isArray(a.members) ||
+      !a.members.length ||
+      a.members.length > 500 ||
+      (a.unique !== undefined && typeof a.unique !== "boolean")
+    )
+      bad();
+    const keys = new Set<string>();
+    for (const m of a.members) {
+      if (
+        !m ||
+        !text(m.key) ||
+        keys.has(m.key) ||
+        !text(m.name) ||
+        !vector(m.position) ||
+        !finite(m.rotation) ||
+        !p.definitions.some((d: Definition) => d.id === m.definitionId) ||
+        !p.tags.some((t: Tag) => t.id === m.tag) ||
+        (m.material !== undefined && !Object.hasOwn(MATERIALS, m.material))
+      )
+        bad();
+      keys.add(m.key);
+    }
+    defs.set(a.id, keys);
+  }
+  for (const g of p.groups)
+    if (g.assemblyId !== undefined && !defs.has(g.assemblyId)) bad();
+  const seen = new Set<string>();
+  for (const o of p.objects) {
+    if (o.assemblyKey === undefined) continue;
+    const g = p.groups.find((v: Group) => v.id === o.groupId);
+    const unique = JSON.stringify([o.groupId, o.assemblyKey]);
+    if (
+      !g?.assemblyId ||
+      !defs.get(g.assemblyId)?.has(o.assemblyKey) ||
+      seen.has(unique)
+    )
+      bad();
+    seen.add(unique);
+  }
+  return list === undefined ? undefined : list;
+}
 const UNITS = ["m", "cm", "mm"];
 /** Synthetic parts carry no asset; imported parts must carry complete, bounded provenance. */
 function validSource(d: any) {
@@ -905,6 +991,7 @@ export function parseProject(raw: string): Project {
       }
     }
   }
+  const assemblies = validAssemblies(p);
   const mediaParts =
     p.media !== undefined || p.canvases !== undefined
       ? validateMedia(
@@ -937,6 +1024,7 @@ export function parseProject(raw: string): Project {
     groups: p.groups,
     cameras: p.cameras,
     ...(p.connections !== undefined ? { connections: p.connections } : {}),
+    ...(assemblies ? { assemblies } : {}),
     ...(mediaParts ? mediaParts : {}),
     updatedAt: typeof p.updatedAt === "string" ? p.updatedAt : now(),
   };

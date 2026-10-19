@@ -439,3 +439,83 @@ test("imported model can travel in a package and come back after the asset store
     .poll(() => page.evaluate(() => window.__studio.assetsLoaded()))
     .toEqual([[sha, true]]);
 });
+
+test("shared assembly: save a group, place a second instance, detect a deleted member, reset, persist", async ({
+  page,
+}) => {
+  await open(page);
+  await topView(page);
+  const { box: T } = await boxFor(page, "Tafel");
+  await drag(
+    page,
+    { x: T.left - 4, y: T.top - 4 },
+    { x: T.right + 4, y: T.bottom + 4 },
+  );
+  await page.getByRole("button", { name: /Groepeer selectie/ }).click();
+  await page.getByLabel("Naam van de assembly").fill("Tafelset");
+  await page.getByRole("button", { name: /Opslaan als assembly/ }).click();
+  let p = await project(page);
+  expect(p.assemblies).toHaveLength(1);
+  expect(p.assemblies[0].members).toHaveLength(2);
+  expect(p.groups[0]).toMatchObject({
+    name: "Tafelset",
+    assemblyId: p.assemblies[0].id,
+  });
+  await expect(page.getByText(/Gelijk aan de definitie/)).toBeVisible();
+
+  // Place a second instance from the library.
+  await page.getByRole("button", { name: "Plaats Tafelset" }).click();
+  p = await project(page);
+  expect(p.groups).toHaveLength(2);
+  expect(p.groups.every((g) => g.assemblyId === p.assemblies[0].id)).toBe(true);
+  const second = p.groups.find((g) => g.name === "Tafelset 2");
+  expect(p.objects.filter((o) => o.groupId === second.id)).toHaveLength(2);
+
+  // Delete one member of the second instance from the tree.
+  await page
+    .getByRole("button", { name: /Objecten/ })
+    .first()
+    .click();
+  await page
+    .locator(".tree-branch", { hasText: "Tafelset 2" })
+    .locator(".object-name", { hasText: "Projector" })
+    .click();
+  await page.keyboard.press("Delete");
+  await expect
+    .poll(
+      async () =>
+        (await project(page)).objects.filter((o) => o.groupId === second.id)
+          .length,
+    )
+    .toBe(1);
+
+  // Selecting the group shows the deviation; reset brings the member back.
+  await page
+    .locator(".tree-branch", { hasText: "Tafelset 2" })
+    .locator(".group-row .object-name")
+    .click();
+  await expect(page.getByText(/Wijkt af van de definitie/)).toBeVisible();
+  await expect(page.getByText(/ontbreekt/)).toBeVisible();
+  await page
+    .getByRole("button", { name: /Terugzetten naar definitie/ })
+    .click();
+  await expect
+    .poll(
+      async () =>
+        (await project(page)).objects.filter((o) => o.groupId === second.id)
+          .length,
+    )
+    .toBe(2);
+  await expect(page.getByText(/Gelijk aan de definitie/)).toBeVisible();
+
+  // Make unique forks the definition.
+  await page.getByRole("button", { name: "Uniek maken" }).click();
+  p = await project(page);
+  expect(p.assemblies).toHaveLength(2);
+  expect(p.assemblies.some((a) => a.unique)).toBe(true);
+
+  await page.waitForTimeout(1200);
+  await page.reload();
+  await page.waitForFunction(() => window.__studio?.boxes().length > 0);
+  expect((await project(page)).assemblies).toHaveLength(2);
+});

@@ -23,3 +23,5 @@ Dit zijn implementatie-inzichten uit dit project, geen structurele ontwerprichtl
 2026-10-19: koppel code die een externe tool aanstuurt (Blender) aan een nep-runner die de echte uitvoerbestanden schrijft; zo bewijs je wachtrij, retry en verificatie zonder te claimen dat de tool zelf werkt.
 
 2026-10-19: de classificatie "klein bewerking → goedkoopste model" is een heuristiek met zichtbare signalen en reden, geen gemeten kwaliteitsclaim; meet echte uitkomsten voordat je de drempels aanpast.
+
+2026-10-19: een scripted edit die door een formatter-herformattering niet matcht, faalt stil; controleer na elke tekstvervanging dat de wijziging er echt staat (grep) voordat je erop debugt. Ik verloor hier twee debugrondes aan.

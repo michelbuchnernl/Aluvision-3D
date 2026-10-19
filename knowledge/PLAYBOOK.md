@@ -46,3 +46,10 @@ Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headse
 | Decoratieve objecten staan buiten de structurele BOM maar blijven zichtbaar op een eigen blad; structureel + decoratief = scène. | Unit- en e2e-getest | tests/assets.test.mjs, e2e/studio.spec.mjs |
 | Een ontbrekend model is een zichtbaar draadkader van de juiste maat; export en render weigeren in plaats van stil iets weg te laten. | Unit-getest | tests/assets.test.mjs |
 | Bewaar bytes content-addressed en controleer bij heropenen dat de bestandsnaam de hash van de inhoud is. | Unit-getest | tests/package.test.mjs |
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Leid de oorsprong en draaiing van een assembly-exemplaar af uit zijn leden; dan is een rigide verplaatsing geen afwijking en hoeft geen transformatie te worden bijgehouden. | Unit-getest met gesloten-vorm-posities | tests/assemblies.test.mjs |
+| Doorvoer van een definitiewijziging volgt alleen exemplaren die exact gelijk waren aan de oude definitie; afwijkende en vergrendelde exemplaren worden overgeslagen en gemeld. | Unit-getest | tests/assemblies.test.mjs |
+| Een herstelactie mag nooit rebouwen uit niets: zonder herkenbaar lid weigeren in plaats van de rest van de groep te verwijderen. | Unit-getest | tests/assemblies.test.mjs |
+| Na een actie die objecten opnieuw aanmaakt (nieuwe id's) de selectie expliciet herstellen, anders verdwijnt het paneel. | Browser-getest (e2e) | e2e/studio.spec.mjs |

@@ -5,6 +5,7 @@ import { join, dirname } from "node:path";
 import { parseProject, validate } from "../src/model.ts";
 import type { Project } from "../src/model.ts";
 import { fail } from "./errors.ts";
+import { buildContext } from "./knowledge.ts";
 export interface SavedProject {
   project: Project;
   revision: number;
@@ -361,6 +362,11 @@ export class ProjectStore {
       );
     return this.job(id);
   }
+  noteJob(id: string, message: string) {
+    this.db
+      .prepare("UPDATE ai_jobs SET message=? WHERE id=?")
+      .run(message.slice(0, 1500), id);
+  }
   job(id: string): Job {
     const r = this.db
       .prepare("SELECT * FROM ai_jobs WHERE id=?")
@@ -663,12 +669,7 @@ export class ProjectStore {
           .map((r) => `- ${r.created_at} [${r.kind}] ${clean(r.message)}`)
           .join("\n") +
         "\n";
-      const context = `# ${clean(p.name)}\n\nRevisie: ${saved.revision}\nEenheid: cm\nRuimte X × Z × Y: ${p.room.length} × ${p.room.depth} × ${p.room.height}\nExemplaren: ${p.objects.length}\nDefinities: ${p.definitions.length}\nGrensfouten: ${validate(p).filter((i) => i.severity === "error").length}\n\n## Laatste gebeurtenissen\n\n${rows
-        .slice(-8)
-        .map((r) => `- ${clean(r.message)}`)
-        .join(
-          "\n",
-        )}\n\nExacte staat en revisies staan in SQLite. Alle onderdelen zijn synthetisch en niet constructief beoordeeld.\n`;
+      const context = buildContext(p, saved.revision, rows);
       for (const [name, text] of [
         ["LOG.md", log],
         ["CONTEXT.md", context],

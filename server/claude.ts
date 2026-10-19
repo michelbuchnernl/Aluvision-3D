@@ -6,6 +6,8 @@ import {
 } from "../src/operations.ts";
 import { ProjectStore } from "./store.ts";
 import { fail, StudioError } from "./errors.ts";
+import { routeModel } from "./routing.ts";
+import type { RouteResult } from "./routing.ts";
 export const PRICING_SOURCE =
   "https://platform.claude.com/docs/en/about-claude/pricing";
 export const PRICING_VERIFIED_AT = "2026-10-18T00:00:00.000Z";
@@ -142,6 +144,27 @@ export class ClaudeProvider {
       );
     }
   }
+  /** Model ids this key can use right now and that have verified pricing. */
+  async availableModels(): Promise<string[]> {
+    if (!this.apiKey || !this.enabled)
+      fail(503, "ai_disabled", "Claude is niet ingeschakeld op de server.");
+    if (this.clock() - this.checkedAt >= 3600000 || !this.available.size)
+      await this.refreshModels();
+    return [...this.available].filter((id) => id in MODEL_PRICES);
+  }
+  async refreshModels() {
+    const { value } = await this.request("/models?limit=1000");
+    if (!Array.isArray(value.data))
+      throw new ProviderError("Claude-modellijst is ongeldig.", false);
+    this.available = new Set(
+      value.data
+        .filter(
+          (m: any) => m?.lifecycle !== "retired" && typeof m?.id === "string",
+        )
+        .map((m: any) => m.id),
+    );
+    this.checkedAt = this.clock();
+  }
   async verifyModel(model: string) {
     this.assertReady(model);
     if (this.clock() - this.checkedAt < 3600000 && this.available.has(model))
@@ -251,6 +274,15 @@ export class ClaudeService {
     const saved = this.store.get(projectId);
     if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 6000)
       fail(400, "invalid_prompt", "Geef een vraag van maximaal 6000 tekens.");
+    let routing: RouteResult | undefined;
+    if (model === "auto") {
+      routing = routeModel(
+        prompt.trim(),
+        saved.project,
+        await this.provider.availableModels(),
+      );
+      model = routing.model;
+    }
     if (!Number.isSafeInteger(maxOutput) || maxOutput < 256 || maxOutput > 8192)
       fail(
         400,
@@ -302,9 +334,16 @@ export class ClaudeService {
       failureKey,
       owner: holder,
     });
+    if (routing) {
+      const note = `Automatisch gekozen: ${routing.model}. ${routing.reason}`;
+      this.store.noteJob(job.id, note);
+      this.store.event(projectId, "ai_routing", note);
+      job.message = note;
+    }
     return {
       ...this.store.publicJob(job),
       budget: this.store.budget(projectId),
+      ...(routing ? { routing } : {}),
     };
   }
   async run(id: string, holder: string, leaseToken: string) {

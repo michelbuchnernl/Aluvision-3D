@@ -1,4 +1,4 @@
-# Bouwstatus — versie 0.7
+# Bouwstatus — versie 0.8
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -45,6 +45,13 @@
 - **Portable projectpakket (.zip):** project.json, scene.glb, bom.xlsx, manifest met SHA-256; strikte heropening (beschadiging, ontbrekende/extra bestanden, onjuiste aantallen worden geweigerd); media wordt als "opnieuw koppelen" gemeld.
 - **Isometrisch lijnaanzicht in de PDF** (assen op volle schaal, standaardschaal, alle randen; geen verborgen-lijnverwijdering). PDF heeft nu 5 pagina's.
 - 22 nieuwe Node-tests (122) en 2 nieuwe e2e-tests (8).
+
+## Toegevoegd in versie 0.8 (geheugen en modelkeuze)
+
+- **Automatische modelkeuze** (standaard in het Claude-paneel): deterministische score → tier → nieuwste beschikbare model met geverifieerde prijs; terugval en reden worden vastgelegd. Nepprovider-getest; heuristiek niet tegen echte kwaliteit gemeten. Zie docs/KNOWLEDGE.md.
+- **Rijkere CONTEXT.md** uit SQLite (openstaande punten incl. canvasnaden, beslissingen, recente revisies, afgeleide volgende acties); `retrieveContext` gebouwd maar nog niet in prompts gekoppeld.
+- **Playbook-bewaking:** `npm run knowledge:check` weigert tested/verified-claims zonder bestaand bewijsbestand; nieuwe regels uit deze sessie toegevoegd.
+- 15 nieuwe tests (137).
 
 ## Bewijs
 

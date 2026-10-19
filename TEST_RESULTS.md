@@ -96,3 +96,9 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - e2e: pakket-roundtrip en beschadigd-pakkettest; de eerste leverde een echte fout op (zip-detectie op bestandsnaam), hersteld met detectie op magic bytes.
 - PDF: isometrische pagina bekeken via Poppler-render: rechte assen, schaal 1:100, geen verborgen-lijnverwijdering.
 - Niet geverifieerd: alles wat Blender zelf doet, rendertijden, panelen-emissie in Blender.
+
+## Versie 0.8 (19 oktober 2026)
+
+- `npm test`: 137 tests (routing 8, knowledge 7 nieuw). Alles met nepprovider; geen echte API-aanroep of kosten.
+- `npm run knowledge:check` geslaagd op het echte PLAYBOOK.md. Een eerste, te losse lintregel (elke "niet" schakelde de controle uit) is aangescherpt met regressietests.
+- Niet geverifieerd: modelkeuze tegen echte promptkwaliteit/kosten, `retrieveContext` in een echte promptketen.

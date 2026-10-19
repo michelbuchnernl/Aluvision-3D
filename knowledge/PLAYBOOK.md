@@ -24,3 +24,17 @@ Deze backend-/modelbewijzen zijn geen promotie tot browser- of echte-provideracc
 | Geometrie-export moet via een echte binary roundtrip op wereld-bounds en eenheden worden gecontroleerd. | GLB-roundtrip getest | tests/glb.test.mjs |
 
 Demo-vlakprofielen zijn geen bewijs van fysieke compatibiliteit; externe viewer-/browseracceptatie staat nog open.
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Herken bestandsformaten aan de inhoud (magic bytes), niet aan de bestandsnaam: downloads en tijdelijke bestanden hebben geen betrouwbare extensie. | Browser-getest (e2e) | e2e/studio.spec.mjs |
+| Vertrouw het rapport van een worker niet: controleer bestaan, formaat en checksum van uitvoerbestanden zelf. | Unit-getest | tests/render.test.mjs |
+| Eén mislukkingsbudget per opdracht (3 pogingen) en herstart zet lopende jobs terug binnen datzelfde budget. | Unit-getest | tests/render.test.mjs |
+| Eén gedeelde texture per projectiecanvas houdt video op alle wanden synchroon; naden en hoeken worden gemeten, niet aangenomen. | Unit-getest, handmatig browser-geobserveerd | tests/media.test.mjs, docs/MEDIA.md |
+| Teleportdoelen alleen op de vloer, met wandmarge en geroteerde footprints; hoofdoffset bepaalt de rigpositie. | Unit-getest; headset niet geprobeerd | tests/teleport.test.mjs, docs/VR.md |
+| Pakketten hebben een manifest met SHA-256 per bestand en worden strikt heropend (geen extra, ontbrekende of gewijzigde bestanden). | Unit- en e2e-getest | tests/package.test.mjs, e2e/studio.spec.mjs |
+| Asmapping Studio (y omhoog, z diepte) naar Blender (z omhoog, −y diepte) voor camera's en GLB-import. | Concept, niet in Blender geprobeerd | docs/BLENDER.md |
+| Een mutatiecontrole (regel tijdelijk breken, test moet falen) bewijst dat een UX-test niet leeg is. | Handmatig uitgevoerd voor selectiekader | docs/E2E.md |
+| Modelkeuze volgt waarneembare signalen en alleen modellen die de sleutel werkelijk kan gebruiken; terugval wordt in de reden vermeld. | Unit-getest met nepprovider | tests/routing.test.mjs |
+
+Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headset of echte API-kosten.

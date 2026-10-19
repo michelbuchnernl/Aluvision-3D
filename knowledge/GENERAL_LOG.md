@@ -15,3 +15,11 @@ Dit zijn implementatie-inzichten uit dit project, geen structurele ontwerprichtl
 2026-10-18: glTF gebruikt meters; projectdata blijft cm. Controleer de werkelijke geëxporteerde wereld-bounds na binair reload om een stille schaalfout niet uit alleen metadata af te leiden.
 
 2026-10-18: uitlijnpreview moet losstaan van opslag en bij apply de actuele basis/locks opnieuw toetsen. Bewaar verbindingen voorlopig als controlemarkeringen, zonder een niet-geïmplementeerde constraint solver te suggereren.
+
+2026-10-19: Node's TypeScript-stripmodus ondersteunt geen constructorparameter-properties (`private x` in de constructor); schrijf velden expliciet uit in code die ook onder `node --experimental-strip-types` draait.
+
+2026-10-19: een e2e-test vond dat zip-import op bestandsnaam leunde; Playwright-downloads hebben een tijdelijke naam zonder extensie. Detecteer op inhoud.
+
+2026-10-19: koppel code die een externe tool aanstuurt (Blender) aan een nep-runner die de echte uitvoerbestanden schrijft; zo bewijs je wachtrij, retry en verificatie zonder te claimen dat de tool zelf werkt.
+
+2026-10-19: de classificatie "klein bewerking → goedkoopste model" is een heuristiek met zichtbare signalen en reden, geen gemeten kwaliteitsclaim; meet echte uitkomsten voordat je de drempels aanpast.

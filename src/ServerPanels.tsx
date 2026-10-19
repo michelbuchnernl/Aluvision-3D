@@ -281,7 +281,7 @@ export function AiPanel({
   focusJobId?: string | null;
 }) {
   const [prompt, setPrompt] = useState(""),
-    [model, setModel] = useState("claude-sonnet-5-5"),
+    [model, setModel] = useState("auto"),
     [limit, setLimit] = useState(
       state.budget ? String(state.budget.limitMicros / 1e6) : "1",
     ),
@@ -423,6 +423,9 @@ export function AiPanel({
           onChange={(e) => setModel(e.target.value)}
           disabled={busy}
         >
+          <option value="auto">
+            Automatisch (past model aan de opdracht aan)
+          </option>
           {(state.ai?.models ?? [{ id: "claude-sonnet-5-5" }]).map((m) => (
             <option key={m.id} value={m.id}>
               {m.id}

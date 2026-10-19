@@ -17,7 +17,8 @@
     "start": "node --experimental-strip-types server/index.ts",
     "start:env": "node --env-file=.env --experimental-strip-types server/index.ts",
     "test:e2e": "playwright test",
-    "blender:dry": "node --experimental-strip-types scripts/blender-dry-run.mjs"
+    "blender:dry": "node --experimental-strip-types scripts/blender-dry-run.mjs",
+    "knowledge:check": "node --experimental-strip-types scripts/knowledge-check.mjs"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

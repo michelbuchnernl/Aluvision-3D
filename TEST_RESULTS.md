@@ -147,3 +147,8 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - tests/library.test.mjs (nu 13): klassen en terugval naar 'Overig', lege klassen verdwijnen, previews alleen met sessiecookie, traversal en kapotte percent-codering geven 404, `classify.py` op representatieve namen, echte bibliotheek volledig geclassificeerd (≤ 5 % 'Overig').
 - Browser (e2e-render/library.spec.mjs): klassenkeuzelijst, subgroepkoppen, miniaturen laden als echte afbeeldingen.
 - Niet geverifieerd: of de klassen overeenkomen met hoe Aluvision zijn eigen assortiment indeelt; de miniaturen tonen een vaste weergave zonder echte oriëntatie.
+
+## Versie 1.6 — operatormodus (19 oktober 2026)
+
+- e2e-render/operator.spec.mjs (2): zoeken en dubbelzinnige/onbekende verwijzingen, model laden met checksum, voorstel toepassen (ruimte + twee deuren), voorstel buiten de ruimte geweigerd zonder deels toepassen, vragen blokkeren, onbekend object geeft een fout, nieuw ontwerp, bewaard project heropenen op ID.
+- Niet getest: afbeeldingsopdrachten (de interpretatie gebeurt in het gesprek, niet in code), groepen/assembly's via de brug, grote scènes met veel zware modellen.

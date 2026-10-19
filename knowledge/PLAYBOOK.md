@@ -79,3 +79,7 @@ Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headse
 | Ruim in een Blender-batch per model alleen de zojuist aangemaakte datablokken op; een recursieve orphan-purge loopt vast op zware modellen. | Op de echte bibliotheek uitgevoerd | blender/render_previews.py |
 | Afbeeldingen die via `<img>` worden geladen kunnen geen eigen headers meesturen; geef ze een route die op alleen de sessiecookie leunt en valideer de bestandsnaam tegen de lijst. | Unit-getest | tests/library.test.mjs |
 | Indelingsregels op naam: vaste volgorde (eerste treffer wint), een rapport van wat in 'Overig' valt en een test op representatieve namen. | Unit-getest | tests/library.test.mjs, scripts/library/classify.py |
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Laat een assistent via dezelfde atomaire, gevalideerde bewerkingen werken als de ingebouwde AI: een voorstel met een fout wordt geweigerd, nooit deels toegepast of stilzwijgend gecorrigeerd. | Browser-getest tegen de echte server | e2e-render/operator.spec.mjs, src/operations.ts |

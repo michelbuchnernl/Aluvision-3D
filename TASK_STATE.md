@@ -1,4 +1,4 @@
-# Bouwstatus — versie 1.5
+# Bouwstatus — versie 1.6
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -93,6 +93,11 @@
 - Alle bibliotheekmodellen zijn in 16 klassen (met subgroepen) ingedeeld op naam (`scripts/library/classify.py`); de app toont een klassenkeuzelijst, koppen en miniaturen; `blender/render_previews.py` rendert de voorbeelden; `scripts/library/build_gallery.py` maakt een doorzoekbare `gallery.html`. Zie docs/LIBRARY_APP.md (docs/LIBRARY.md is van de conversiestap).
 - Server: `classes` en `preview` in de lijst, `/api/library/previews/<bestand>.png` met alleen de sessiecookie.
 - De bibliotheek is intussen door een conversiestap aangevuld (nu 586 bruikbaar, 0 geweigerd); de tests zijn onafhankelijk van die aantallen gemaakt.
+
+## Toegevoegd in versie 1.6 (operatormodus)
+
+- `?operator=1` zet `window.studioOperator` aan: bibliotheek zoeken, modellen laden, gecontroleerde bewerkingen toepassen (atomair, harde ruimtegrenzen blijven), scène lezen, project op ID openen. Zo ontwerpt de assistent in de sessie rechtstreeks in de browser zonder API-sleutel of kosten. Zie docs/OPERATOR.md.
+- Gedeelde laadlogica voor bibliotheekmodellen in `src/libraryModel.ts` (paneel en brug gebruiken hetzelfde pad). 2 nieuwe browsertests.
 
 ## Bewijs
 

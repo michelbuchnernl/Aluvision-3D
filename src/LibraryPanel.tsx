@@ -1,29 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, RefreshCw, AlertTriangle } from "lucide-react";
-import { uid } from "./model";
 import type { Definition, Project } from "./model";
-import { importedDefinition } from "./assetImport";
-import { assetRegistry, sha256OfBytes } from "./assets";
 import type { StudioClient } from "./serverClient";
-export interface LibraryModel {
-  id: string;
-  name: string;
-  file: string;
-  bytes: number;
-  sha256: string;
-  triangles: number;
-  sizeCm: { x: number; y: number; z: number };
-  status: "ready" | "refused";
-  reason?: string;
-  notes: string[];
-  description: string;
-  domain?: string;
-  provenance: string;
-  url?: string;
-  class: string;
-  group?: string;
-  preview: boolean;
-}
+import { loadLibraryDefinition } from "./libraryModel";
+import type { LibraryModel } from "./libraryModel";
 interface LibraryClass {
   id: string;
   label: string;
@@ -104,36 +84,9 @@ export function LibraryPanel({
     if (existing) return onAdd(existing);
     setBusy(m.file);
     try {
-      const blob = await client.blob(
-        `/library/files/${encodeURIComponent(m.file)}`,
-      );
-      const bytes = await blob.arrayBuffer();
-      const sha = await sha256OfBytes(bytes);
-      if (sha !== m.sha256)
-        throw Error(
-          "De controlesom van het bestand wijkt af van de bibliotheekmanifest; het model is niet toegevoegd.",
-        );
-      const inspection = await assetRegistry.add(sha, bytes, false);
-      const def = importedDefinition(
-        uid(),
-        {
-          name: m.name,
-          units: "m",
-          role: "custom",
-          provenance:
-            m.provenance || "AluVision-bibliotheek (SketchUp 3D Warehouse)",
-        },
-        inspection,
-        { sha256: sha, bytes: bytes.byteLength, fileName: m.file },
-        { libraryFile: m.file, warehouseId: m.id, description: m.description },
-      );
-      const off = ["x", "y", "z"].some(
-        (k) =>
-          Math.abs((def.size as any)[k] - (m.sizeCm as any)[k]) >
-          0.05 * Math.max(1, (m.sizeCm as any)[k]),
-      );
+      const { def, sizeOff } = await loadLibraryDefinition(client, p, m);
       onAdd(def);
-      if (off)
+      if (sizeOff)
         onMessage(
           `${m.name}: de gemeten afmeting wijkt meer dan 5% af van het manifest (${cm(def.size.x)} × ${cm(def.size.y)} × ${cm(def.size.z)} cm).`,
         );

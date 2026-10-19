@@ -87,6 +87,9 @@ import { MediaPanel } from "./MediaPanel";
 import { RenderPanel } from "./RenderPanel";
 import { AssetPanel } from "./AssetPanel";
 import { LibraryPanel } from "./LibraryPanel";
+import { loadLibraryDefinition } from "./libraryModel";
+import type { LibraryModel } from "./libraryModel";
+import { previewProposal } from "./operations";
 import { AssemblyInspector, AssemblyLibrary } from "./AssemblyPanel";
 import { assetRegistry } from "./assets";
 import { MediaRuntime } from "./mediaRuntime";
@@ -322,6 +325,148 @@ function App() {
       delete (window as any).__studio;
     };
   }, []);
+  // Operator bridge (opt-in with ?operator=1): lets an assistant working through this browser build a design with
+  // the same validated, atomic scene operations as the Claude panel, without an API key. Hard room limits are
+  // never overridden: a proposal with errors is returned, not applied.
+  const operatorRef = useRef<any>(null);
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).has("operator")) return;
+    let listing: LibraryModel[] | null = null;
+    const models = async () => {
+      listing ??= (await operatorRef.current.client.request("/library"))
+        .models as LibraryModel[];
+      return listing;
+    };
+    const brief = (m: LibraryModel) => ({
+      file: m.file,
+      id: m.id,
+      name: m.name,
+      class: m.class,
+      group: m.group,
+      sizeCm: m.sizeCm,
+      description: m.description.split("\n")[0],
+    });
+    (window as any).studioOperator = {
+      /** Search the AluVision library by name/description, optionally within one class. */
+      library: async (query = "", cls = "", limit = 25) => {
+        const q = query.toLowerCase();
+        return (await models())
+          .filter((m) => m.status === "ready" && (!cls || m.class === cls))
+          .filter(
+            (m) =>
+              !q ||
+              m.name.toLowerCase().includes(q) ||
+              m.description.toLowerCase().includes(q),
+          )
+          .slice(0, limit)
+          .map(brief);
+      },
+      /** Make sure the project has a definition for a library model (file name, Warehouse id or unique name). */
+      ensureModel: async (ref: string) => {
+        const all = await models();
+        const key = ref.toLowerCase();
+        let hits = all.filter(
+          (m) =>
+            m.file.toLowerCase() === key ||
+            m.id.toLowerCase() === key ||
+            m.name.toLowerCase() === key,
+        );
+        if (!hits.length)
+          hits = all.filter((m) => m.name.toLowerCase().includes(key));
+        if (hits.length !== 1)
+          return {
+            ok: false,
+            message: hits.length
+              ? `Meerdere modellen passen bij "${ref}"; kies er één.`
+              : `Geen model gevonden voor "${ref}".`,
+            candidates: hits.slice(0, 10).map(brief),
+          };
+        const op = operatorRef.current,
+          { def, isNew } = await loadLibraryDefinition(
+            op.client,
+            pRef.current,
+            hits[0],
+          );
+        if (isNew)
+          op.change((q: Project) => ({
+            ...q,
+            definitions: [...q.definitions, def],
+          }));
+        return {
+          ok: true,
+          definitionId: def.id,
+          name: def.name,
+          sizeCm: def.size,
+          catalogId: def.catalogId,
+        };
+      },
+      /** Apply a SceneProposal ({summary, questions, operations}) atomically; errors (e.g. outside the room) refuse it. */
+      apply: (proposal: unknown) => {
+        const before = new Set(pRef.current.objects.map((o) => o.id));
+        const r = previewProposal(pRef.current, proposal);
+        if (!r.canApply)
+          return {
+            applied: false,
+            issues: r.issues,
+            questions: r.proposal.questions,
+            message: r.proposal.questions.length
+              ? "Er staan nog vragen open."
+              : "Voorstel niet toegepast: zie issues.",
+          };
+        operatorRef.current.change(r.project);
+        return {
+          applied: true,
+          issues: r.issues,
+          roomChanged: r.roomChanged,
+          newObjectIds: r.project.objects
+            .filter((o) => !before.has(o.id))
+            .map((o) => o.id),
+        };
+      },
+      /** Compact view of the scene for planning. */
+      scene: () => {
+        const p = pRef.current;
+        return {
+          id: p.id,
+          name: p.name,
+          room: p.room,
+          objects: p.objects.map((o) => {
+            const d = p.definitions.find((v) => v.id === o.definitionId)!;
+            return {
+              id: o.id,
+              name: o.name,
+              position: o.position,
+              rotation: o.rotation,
+              sizeCm: d.size,
+              locked: o.locked,
+            };
+          }),
+          definitions: p.definitions.map((d) => ({
+            id: d.id,
+            name: d.name,
+            sizeCm: d.size,
+          })),
+        };
+      },
+      newDesign: (room?: { length: number; depth: number; height: number }) => {
+        const next = newProject();
+        if (room) next.room = room;
+        operatorRef.current.change(next);
+        return { ok: true };
+      },
+      /** Open a project that is stored on the server, by its id. */
+      openServerProject: async (id: string) => {
+        await operatorRef.current.connection.open(id);
+        return { ok: true };
+      },
+      view: (v: string) => operatorRef.current.setView(v),
+      preset: (v: string) => operatorRef.current.setPreset(v),
+      fit: () => operatorRef.current.api.current?.fit(),
+    };
+    return () => {
+      delete (window as any).studioOperator;
+    };
+  }, []);
   const selectedRef = useRef<string[]>([]);
   const loadRef = useRef<(json: string) => void>(() => {});
   selectedRef.current = selected;
@@ -479,6 +624,19 @@ function App() {
     setH((h) => commit(h, parseProject(json)));
     setSelected([]);
     setEditGroupId(null);
+  };
+  operatorRef.current = {
+    client: server.connection.client,
+    connection: server.connection,
+    change: (next: Project | ((p: Project) => Project)) => {
+      const value = typeof next === "function" ? next(pRef.current) : next;
+      // Visible to scene() right away; React re-renders (and overwrites this ref) a moment later.
+      pRef.current = value;
+      setH((h) => commit(h, value));
+    },
+    setView,
+    setPreset,
+    api,
   };
   useEffect(() => {
     setSelected((prev) => {

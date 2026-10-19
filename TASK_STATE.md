@@ -1,4 +1,4 @@
-# Bouwstatus — versie 1.1
+# Bouwstatus — versie 1.2
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -70,6 +70,11 @@
 
 - De Blender-worker draaide voor het eerst echt (Blender 5.1.1 headless): GLB-import, eenheden, asmapping, links/rechts, paneelemissie en 90°-hoek bevestigd; één fout gevonden en hersteld (gezichtsveld horizontaal i.p.v. verticaal). Haze is alleen afstandsdemping. Zie docs/BLENDER.md met de resultatentabel en wat nog open staat.
 - Nieuw: `npm run blender:orientation` en `blender/diag_bbox.py` als herhaalbare controle. De Blender-MCP is niet gebruikt (geen open Blender-venster).
+
+## Toegevoegd in versie 1.2 (Blender-keten end-to-end)
+
+- Volledige keten bewezen met een echt serverproces en echte Blender (`npm run render:smoke`, 4,1 s) en opt-in tests met echte Blender (`BLENDER_PATH=… npm test`: render, geknoeide scène → 3 pogingen → failed, ontbrekende executable). Zonder `BLENDER_PATH` worden die drie tests overgeslagen en gemeld.
+- Doorlooptijden op M1 Pro vastgelegd (EEVEE 1080p 2,4 s, 4K 4,3 s; Cycles-CPU 1080p 64 spl 16,7 s). Zie docs/BLENDER.md.
 
 ## Bewijs
 

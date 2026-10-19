@@ -1,6 +1,6 @@
 # Blender-renderwachtrij (eerste echte run gedaan)
 
-Status: de wachtrij is getest met een nep-runner. **De worker is op 19 oktober 2026 voor het eerst echt uitgevoerd op Blender 5.1.1 (macOS, headless)**; zie 'Resultaten eerste run'. De wachtrij is nog niet met een echte Blender als runner end-to-end doorlopen (HTTP → wachtrij → Blender).
+Status: de wachtrij is getest met een nep-runner. **De worker is op 19 oktober 2026 voor het eerst echt uitgevoerd op Blender 5.1.1 (macOS, headless)**; zie 'Resultaten eerste run'. De volledige keten (HTTP → wachtrij → echte Blender → verificatie → download) is ook doorlopen met het echte serverproces.
 
 ## Onderdelen
 
@@ -49,13 +49,33 @@ De Blender-MCP (`mcp__Blender__*`) praat met een **open Blender-venster** met de
 | Haze | Bij 0,004 (standaard) geen zichtbaar effect; bij 0,02 lichte demping op afstand; bij 0,25 een volledig zwart beeld. Het werkt dus alleen als afstandsdemping; er is **geen lichtverstrooiing/bundels** te zien en emissieve panelen verlichten de haze niet. De waarde moet op het oog worden afgesteld |
 | Dichte belichting in Immersief | Frames en deuren zijn bijna zwart; alleen de glooiende panelen zijn zichtbaar. Dat is de stijl, maar hij is donkerder dan de browserpreview |
 
+## Keten end-to-end en doorlooptijden (19 oktober 2026)
+
+| Controle | Uitkomst |
+| --- | --- |
+| `npm run render:smoke`: echt serverproces met `BLENDER_PATH`, project + bewerkingslock, opdracht via HTTP, polling, download en checksumvergelijking | Geslaagd, klaar na 4,1 s (640×360, Immersief) |
+| `tests/render-blender.test.mjs` (opt-in met `BLENDER_PATH`): twee camera's (perspectief + orthografisch) renderen en worden vanaf schijf geverifieerd | Geslaagd; de twee beelden verschillen |
+| Zelfde, met een geknoeide `scene.glb` | De worker weigert (checksum); drie pogingen, dan `failed` met bewijs in het bericht |
+| Zelfde, met een niet-bestaand Blender-pad | Faalt direct en netjes (poging 1, terug in de wachtrij) |
+
+Doorlooptijden, Apple M1 Pro, wandklok inclusief opstarten van Blender (~1,5 s), demo-hoekkamer, Presentatie-stijl:
+
+| Engine | Resolutie | Samples | Tijd |
+| --- | --- | --- | --- |
+| EEVEE | 1920×1080 | 64 | 2,4 s |
+| EEVEE | 3840×2160 | 64 | 4,3 s |
+| Cycles (CPU) | 1280×720 | 32 | 5,1 s |
+| Cycles (CPU) | 1920×1080 | 64 | 16,7 s |
+
+Eén Mac en één eenvoudige scène: geen belasting- of geheugenmeting, geen GPU-Cycles, geen geteste scène met veel geïmporteerde modellen. Het Cycles-beeld toont zachte schaduwen en de projectorlens aan de goede kant; de demo heeft geen vloer of plafond, dus de wereldkleur vult die vlakken.
+
 ## Nog open
 
-- [ ] Wachtrij end-to-end met echte Blender als runner (server met `BLENDER_PATH`, opdracht via het paneel).
-- [ ] Rendertijd en geheugen op 1920×1080 en 4K, en met Cycles (niet geprobeerd).
 - [ ] Haze afstellen of vervangen door lichtbronnen met volumetrische kegels.
 - [ ] Vergelijking naast de browserpreview (kleur, helderheid) en een Blender 4.2/4.5-controle.
-- [ ] Oudere Blender-versies; Linux/Windows.
+- [ ] Oudere Blender-versies; Linux/Windows; GPU-Cycles.
+- [ ] Renderen van scènes met geïmporteerde modellen en met media op de panelen.
+- [ ] Annuleren van een lopende render; voortgangsmelding tijdens het renderen.
 
 ## Bewust niet gedaan
 

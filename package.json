@@ -19,7 +19,8 @@
     "test:e2e": "playwright test",
     "blender:dry": "node --experimental-strip-types scripts/blender-dry-run.mjs",
     "knowledge:check": "node --experimental-strip-types scripts/knowledge-check.mjs",
-    "blender:orientation": "node --experimental-strip-types scripts/blender-orientation.mjs"
+    "blender:orientation": "node --experimental-strip-types scripts/blender-orientation.mjs",
+    "render:smoke": "node --experimental-strip-types scripts/render-smoke.mjs"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

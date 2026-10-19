@@ -58,3 +58,7 @@ Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headse
 | --- | --- | --- |
 | Zet in Blender `sensor_fit = VERTICAL` zodra het gezichtsveld uit een webviewer komt; anders wordt het horizontaal toegepast. | Op Blender 5.1.1 uitgevoerd en bekeken | docs/BLENDER.md, scripts/blender-orientation.mjs |
 | Controleer handedness met een asymmetrische scène en bounding boxes, niet met een symmetrische kamer. | Op Blender 5.1.1 uitgevoerd | scripts/blender-orientation.mjs, blender/diag_bbox.py |
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Tests tegen een echte externe tool zijn opt-in via een omgevingsvariabele en melden bij overslaan expliciet waarom; de logica blijft apart getest met een nep-runner. | Uitgevoerd met en zonder echte Blender | tests/render-blender.test.mjs, tests/render.test.mjs |

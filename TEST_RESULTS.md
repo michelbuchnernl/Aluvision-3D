@@ -122,3 +122,9 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - Blender 5.1.1 (build 2026-04-14), macOS, headless: `npm run blender:dry -- --run` en `npm run blender:orientation` geslaagd; resultaten in docs/BLENDER.md.
 - Gevonden: gezichtsveld horizontaal in plaats van verticaal; hersteld en opnieuw gerenderd. Haze-gedrag vastgelegd (alleen demping).
 - Niet getest: wachtrij met echte Blender, Cycles, 4K, andere Blender-versies, Blender-MCP.
+
+## Versie 1.2 — Blender end-to-end (19 oktober 2026)
+
+- Standaard `npm test`: 168 geslaagd, 3 overgeslagen (echte-Blender-tests). Met `BLENDER_PATH=/Applications/Blender.app/Contents/MacOS/Blender`: de 3 draaien en slagen (totaal ~4,7 s).
+- `npm run render:smoke` geslaagd (echt serverproces, HTTP, Blender 5.1.1, download gecontroleerd).
+- Niet getest: andere Blender-versies/OS, lange of zware renders, annuleren tijdens het renderen.

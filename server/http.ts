@@ -6,6 +6,9 @@ import { resolve, extname, sep } from "node:path";
 import { ProjectStore } from "./store.ts";
 import { ClaudeProvider, ClaudeService } from "./claude.ts";
 import { StudioError, fail } from "./errors.ts";
+import { MAX_ATTEMPTS } from "./renders.ts";
+import type { RenderService } from "./renders.ts";
+import { readFileSync } from "node:fs";
 interface Session {
   id: string;
   csrf: string;
@@ -14,6 +17,7 @@ interface Session {
 interface Options {
   store: ProjectStore;
   provider?: ClaudeProvider;
+  renders?: RenderService;
   accessToken?: string;
   allowedOrigins?: string[];
   staticRoot?: string;
@@ -229,9 +233,73 @@ export function createStudioServer(options: Options) {
         send(200, provider.status());
         return;
       }
+      const renders = options.renders;
+      if (url.pathname === "/api/render/status" && method === "GET") {
+        send(200, {
+          available: !!renders,
+          blenderConfigured: renders?.configured ?? false,
+          maxAttempts: MAX_ATTEMPTS,
+        });
+        return;
+      }
+      if (path[1] === "renders" && path[2]) {
+        if (!renders)
+          fail(503, "render_unavailable", "Renderwachtrij is niet actief.");
+        if (path.length === 3 && method === "GET") {
+          send(200, renders.queue.get(path[2]));
+          return;
+        }
+        if (path.length === 4 && path[3] === "cancel" && method === "POST") {
+          const job = renders.queue.get(path[2]);
+          store.assertLease(job.projectId, actor, leaseToken);
+          send(200, renders.queue.cancel(path[2]));
+          return;
+        }
+        if (path.length === 4 && method === "GET") {
+          const file = renders.queue.outputPath(path[2], path[3]);
+          const bytes = readFileSync(file);
+          res.writeHead(200, {
+            "Content-Type": "image/png",
+            "Content-Length": bytes.length,
+            "Content-Disposition": `attachment; filename="${path[3]}"`,
+          });
+          res.end(bytes);
+          return;
+        }
+      }
       if (path[1] === "projects" && path[2]) {
         const id = path[2],
           action = path[3];
+        if (action === "renders" && path.length === 4) {
+          if (!renders)
+            fail(503, "render_unavailable", "Renderwachtrij is niet actief.");
+          if (method === "GET") {
+            store.get(id);
+            send(200, {
+              jobs: renders.queue.list(id),
+              blenderConfigured: renders.configured,
+            });
+            return;
+          }
+          if (method === "POST") {
+            const b = await jsonBody(req);
+            store.assertLease(id, actor, leaseToken);
+            const head = store.get(id).revision;
+            if (!b.spec || b.spec.projectId !== id || b.spec.revision !== head)
+              fail(
+                409,
+                "render_stale",
+                "De opdracht hoort niet bij de huidige revisie. Bewaar en probeer opnieuw.",
+              );
+            if (typeof b.glbBase64 !== "string")
+              fail(400, "glb_required", "GLB ontbreekt.");
+            send(
+              201,
+              renders.queue.enqueue(b.spec, Buffer.from(b.glbBase64, "base64")),
+            );
+            return;
+          }
+        }
         if (path.length === 3 && method === "GET") {
           send(200, store.get(id));
           return;

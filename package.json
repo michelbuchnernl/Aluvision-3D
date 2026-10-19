@@ -16,10 +16,12 @@
     "server": "node --experimental-strip-types server/index.ts",
     "start": "node --experimental-strip-types server/index.ts",
     "start:env": "node --env-file=.env --experimental-strip-types server/index.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "blender:dry": "node --experimental-strip-types scripts/blender-dry-run.mjs"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",

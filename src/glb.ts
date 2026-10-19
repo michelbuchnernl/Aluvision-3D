@@ -73,6 +73,7 @@ export function glbScene(input: Project, includeHidden = false) {
     part.userData = {
       studioInstanceId: o.id,
       definitionId: d.id,
+      kind: d.kind,
       catalogId: d.catalogId,
       source: d.source,
       materialId: id,

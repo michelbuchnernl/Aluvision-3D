@@ -86,6 +86,7 @@ import { useProjectServer } from "./useProjectServer";
 import { SceneTree } from "./SceneTree";
 import { AlignmentPanel, MeasurementPanel } from "./SpatialTools";
 import { MediaPanel } from "./MediaPanel";
+import { RenderPanel } from "./RenderPanel";
 import { MediaRuntime } from "./mediaRuntime";
 import { applyAlignmentPreview, removeConnection } from "./spatial";
 import type { AlignmentPreview } from "./spatial";
@@ -285,6 +286,7 @@ function App() {
       | "ai"
       | "align"
       | "media"
+      | "render"
     >(null),
     [toast, setToast] = useState(""),
     [saved, setSaved] = useState(true),
@@ -530,12 +532,32 @@ function App() {
   const onImport = async (f?: File) => {
     if (!f) return;
     try {
-      if (f.size > 10_000_000) throw Error("Bestand is groter dan 10 MB.");
-      const next = parseProject(await f.text());
+      let next: Project,
+        note = "Project geladen en gecontroleerd";
+      // Detect by content (ZIP magic), not by file name.
+      const magic = new Uint8Array(await f.slice(0, 4).arrayBuffer());
+      if (
+        magic[0] === 0x50 &&
+        magic[1] === 0x4b &&
+        magic[2] === 3 &&
+        magic[3] === 4
+      ) {
+        if (f.size > 100_000_000) throw Error("Pakket is groter dan 100 MB.");
+        const { readPackage } = await import("./projectPackage");
+        const pkg = await readPackage(new Uint8Array(await f.arrayBuffer()));
+        next = pkg.project;
+        note = [
+          "Pakket gecontroleerd (controlesommen kloppen)",
+          ...pkg.warnings,
+        ].join(". ");
+      } else {
+        if (f.size > 10_000_000) throw Error("Bestand is groter dan 10 MB.");
+        next = parseProject(await f.text());
+      }
       snapshot("Herstelpunt bewaard");
       change(next);
       setSelected([]);
-      announce("Project geladen en gecontroleerd");
+      announce(note);
     } catch (e) {
       announce(
         e instanceof Error ? e.message : "Project kon niet worden geladen",
@@ -680,6 +702,36 @@ function App() {
     } catch (err) {
       announce(
         "PDF-export mislukt: " +
+          (err instanceof Error ? err.message : "onbekende fout"),
+      );
+    } finally {
+      setExportBusy(false);
+    }
+  };
+  const exportPackage = async () => {
+    if (showingPreview) {
+      announce(
+        "Sluit eerst de voorstelweergave voordat je het ontwerp exporteert.",
+      );
+      return;
+    }
+    setExportMenu(false);
+    setExportBusy(true);
+    try {
+      const [{ glbBytes }, e, { buildPackage }] = await Promise.all([
+        import("./glb"),
+        import("./exports"),
+        import("./projectPackage"),
+      ]);
+      const zip = await buildPackage(p, {
+        glb: new Uint8Array(await glbBytes(p, false)),
+        xlsx: new Uint8Array(await e.xlsxBytes(p)),
+      });
+      saveBytes("boormester-pakket.zip", zip, "application/zip");
+      announce("Projectpakket gedownload · controlesommen in manifest.json");
+    } catch (err) {
+      announce(
+        "Pakket maken mislukt: " +
           (err instanceof Error ? err.message : "onbekende fout"),
       );
     } finally {
@@ -873,10 +925,29 @@ function App() {
                     <small>XLSX · inclusief alle exemplaren</small>
                   </span>
                 </button>
+                <button disabled={showingPreview} onClick={exportPackage}>
+                  <Download size={15} />
+                  <span>
+                    Projectpakket
+                    <small>ZIP · project, GLB, Excel, controlesommen</small>
+                  </span>
+                </button>
                 <button disabled={showingPreview} onClick={exportGlb}>
                   <Box size={15} />
                   <span>
                     3D-model<small>GLB · meters · demo-geometrie</small>
+                  </span>
+                </button>
+                <button
+                  onClick={() => {
+                    setExportMenu(false);
+                    setModal("render");
+                  }}
+                >
+                  <Clapperboard size={15} />
+                  <span>
+                    Blender-render
+                    <small>PNG · wachtrij op de server · voorbereid</small>
                   </span>
                 </button>
                 <label className="glb-visibility">
@@ -2042,7 +2113,7 @@ function App() {
       </footer>
       <input
         type="file"
-        accept=".json,application/json"
+        accept=".json,application/json,.zip,application/zip"
         ref={file}
         className="hidden"
         onChange={(e) => onImport(e.target.files?.[0])}
@@ -2064,7 +2135,8 @@ function App() {
               (modal === "bom" ||
               modal === "server" ||
               modal === "ai" ||
-              modal === "media"
+              modal === "media" ||
+              modal === "render"
                 ? "wide"
                 : "")
             }
@@ -2073,21 +2145,23 @@ function App() {
             aria-label={
               modal === "align"
                 ? "Demo-uitlijnvlakken verbinden"
-                : modal === "media"
-                  ? "Media en projectiecanvas"
-                  : modal === "server"
-                    ? "Serverprojecten en revisies"
-                    : modal === "ai"
-                      ? "Ontwerpen met Claude"
-                      : modal === "bom"
-                        ? "Onderdelenlijst"
-                        : modal === "room"
-                          ? "Ruimteafmetingen"
-                          : modal === "versions"
-                            ? "Versiegeschiedenis"
-                            : modal === "new"
-                              ? "Nieuw ontwerp"
-                              : "Bediening en informatie"
+                : modal === "render"
+                  ? "Blender-renderwachtrij"
+                  : modal === "media"
+                    ? "Media en projectiecanvas"
+                    : modal === "server"
+                      ? "Serverprojecten en revisies"
+                      : modal === "ai"
+                        ? "Ontwerpen met Claude"
+                        : modal === "bom"
+                          ? "Onderdelenlijst"
+                          : modal === "room"
+                            ? "Ruimteafmetingen"
+                            : modal === "versions"
+                              ? "Versiegeschiedenis"
+                              : modal === "new"
+                                ? "Nieuw ontwerp"
+                                : "Bediening en informatie"
             }
             onClick={(e) => e.stopPropagation()}
           >
@@ -2110,6 +2184,16 @@ function App() {
                   setTool("select");
                   setMeasurePoints([]);
                 }}
+              />
+            )}
+            {modal === "render" && (
+              <RenderPanel
+                project={p}
+                connection={server.connection}
+                state={server.state}
+                preset={preset}
+                readOnly={readOnly}
+                onMessage={announce}
               />
             )}
             {modal === "media" && (

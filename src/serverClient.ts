@@ -1,6 +1,8 @@
 import { uid, clone } from "./model.ts";
 import type { Project } from "./model.ts";
 import type { SceneProposal } from "./operations.ts";
+import { buildRenderSpec } from "./renderSpec.ts";
+import type { RenderOptions, RenderSpec } from "./renderSpec.ts";
 export type ConnectionMode =
   "local" | "connecting" | "connected" | "offline" | "conflict" | "locked";
 export interface ServerDocument {
@@ -140,9 +142,36 @@ export class StudioClient {
     if (!r.ok) throw new ServerRequestError(r.status, value);
     return value as T;
   }
+  /** Authenticated binary download (the API needs the tab header, so plain links will not do). */
+  async blob(path: string): Promise<Blob> {
+    if (!this.csrf) await this.session();
+    const r = await this.fetcher("/api" + path, {
+      credentials: "same-origin",
+      headers: {
+        "x-studio-client": this.clientId,
+        ...(this.accessCode ? { "x-studio-access": this.accessCode } : {}),
+      },
+    });
+    if (!r.ok)
+      throw new ServerRequestError(r.status, {
+        error: "download_failed",
+        message: "Bestand kon niet worden gedownload.",
+      });
+    return r.blob();
+  }
 }
 export const contentFingerprint = (p: Project) =>
   JSON.stringify({ ...p, updatedAt: "" });
+export interface RenderJobInfo {
+  id: string;
+  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  attempts: number;
+  message: string;
+  createdAt: string;
+  revision: number;
+  spec: RenderSpec;
+  outputs: { camera: string; file: string; bytes: number; sha256: string }[];
+}
 export interface ConnectionState {
   mode: ConnectionMode;
   projectId: string | null;
@@ -477,6 +506,58 @@ export class ProjectConnection {
     } catch (e) {
       throw this.error(e);
     }
+  }
+  async renderStatus() {
+    return this.client.request<{
+      available: boolean;
+      blenderConfigured: boolean;
+      maxAttempts: number;
+    }>("/render/status");
+  }
+  async renders() {
+    return this.client.request<{
+      jobs: RenderJobInfo[];
+      blenderConfigured: boolean;
+    }>(this.path() + "/renders");
+  }
+  /** Saves first so the render is of a stored revision, then queues it with the matching GLB. */
+  async submitRender(
+    options: RenderOptions,
+    makeGlb: (p: Project) => Promise<ArrayBuffer>,
+  ) {
+    await this.flush();
+    const revision = this.state.revision;
+    if (!revision || this.state.mode !== "connected")
+      throw new ServerRequestError(0, {
+        message: "Verbind eerst met een serverproject om te renderen.",
+      });
+    const project = this.current,
+      glb = new Uint8Array(await makeGlb(project));
+    const digest = await crypto.subtle.digest("SHA-256", glb);
+    const sha256 = [...new Uint8Array(digest)]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    const spec = buildRenderSpec(project, revision, options, {
+      sha256,
+      bytes: glb.length,
+    });
+    let binary = "";
+    for (let i = 0; i < glb.length; i += 0x8000)
+      binary += String.fromCharCode(...glb.subarray(i, i + 0x8000));
+    return this.client.request<RenderJobInfo>(
+      this.path() + "/renders",
+      "POST",
+      { spec, glbBase64: btoa(binary) },
+      this.leaseToken,
+    );
+  }
+  async cancelRender(id: string) {
+    return this.client.request<RenderJobInfo>(
+      `/renders/${id}/cancel`,
+      "POST",
+      {},
+      this.leaseToken,
+    );
   }
   async setBudget(limitMicros: number) {
     const result = await this.client.request<Budget>(

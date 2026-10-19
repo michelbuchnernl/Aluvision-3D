@@ -10,6 +10,7 @@ import {
   validate,
 } from "./model.ts";
 import type { Project, Vec3 } from "./model.ts";
+import { isometricSegments, fitScale } from "./isometric.ts";
 export function buildWorkbook(p: Project) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Boormester Immersive Studio";
@@ -340,6 +341,41 @@ export function technicalPdf(p: Project, screenshot?: string) {
       179,
     );
   });
+  {
+    pdf.addPage();
+    const iso = isometricSegments(p),
+      wCm = iso.max.u - iso.min.u,
+      hCm = iso.max.v - iso.min.v;
+    const scale = fitScale(wCm, hCm, { w: 236, h: 112 }),
+      k = 10 / scale;
+    header("Isometrisch lijnaanzicht", scale);
+    const left = margin + (240 - wCm * k) / 2,
+      top = 47 + (120 - hCm * k) / 2;
+    const at = (q: { u: number; v: number }) => ({
+      x: left + (q.u - iso.min.u) * k,
+      y: top + (iso.max.v - q.v) * k,
+    });
+    for (const kind of ["room", "object"] as const) {
+      pdf.setLineWidth(kind === "room" ? 0.35 : 0.15);
+      if (kind === "room") pdf.setDrawColor(90, 125, 110);
+      else pdf.setDrawColor(135, 155, 150);
+      for (const s of iso.segments.filter((v) => v.kind === kind)) {
+        const a = at(s.a),
+          b = at(s.b);
+        const bad = s.objectId && errors.some((e) => e.objectId === s.objectId);
+        if (bad) pdf.setDrawColor(195, 90, 75);
+        pdf.line(a.x, a.y, b.x, b.y);
+        if (bad) pdf.setDrawColor(135, 155, 150);
+      }
+    }
+    pdf.setFontSize(7);
+    pdf.setTextColor(140, 150, 144);
+    pdf.text(
+      "Isometrische tekening vanuit de +X/+Z-hoek: de assen zijn op volle schaal getekend (30 graden), alle randen zichtbaar, verborgen lijnen niet verwijderd.",
+      margin,
+      179,
+    );
+  }
   if (screenshot) {
     pdf.addPage();
     header("Huidig standpunt");

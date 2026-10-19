@@ -8,7 +8,7 @@ Start zelf een Vite-server op poort 4180 en gebruikt de geïnstalleerde **Google
 
 De app biedt alleen met `?e2e=1` een **alleen-lezen** hook `window.__studio` (`project()`, `boxes()`, `selected()`) zodat tests schermposities en toestand kunnen lezen zonder interne state aan te passen.
 
-## Dekking (6 tests)
+## Dekking (8 tests)
 
 | Test | Controleert |
 | --- | --- |
@@ -18,6 +18,7 @@ De app biedt alleen met `?e2e=1` een **alleen-lezen** hook `window.__studio` (`p
 | Handmatig bewerken | Dupliceren, undo, redo, standpunt opslaan, herstel na herladen (autosave) |
 | Hoekcanvas | 8 panelen, hoek 90° getoond, afbeelding koppelen (SHA-256 in metadata), fit-modus |
 | Export | XLSX is een zip, JSON heeft canvassen en alle objecten |
+| Projectpakket | Exporteren, kamer leegmaken, zip heropenen: project en canvassen identiek; een beschadigde zip wordt geweigerd zonder het project te wijzigen (vond een echte fout: detectie op bestandsnaam i.p.v. zip-inhoud) |
 
 ## Niet gedekt
 

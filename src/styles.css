@@ -2793,3 +2793,14 @@ tfoot td {
   border-radius: 8px;
   font-size: 12px;
 }
+.render-job {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #d5dde2;
+  border-radius: 10px;
+  font-size: 12px;
+}
+.render-job .button {
+  justify-self: start;
+}

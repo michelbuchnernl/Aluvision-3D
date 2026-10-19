@@ -264,3 +264,50 @@ test("exports download valid files: XLSX is a zip, JSON re-parses with media int
   expect(parsed.canvases).toHaveLength(1);
   expect(parsed.objects.length).toBe((await project(page)).objects.length);
 });
+
+test("portable package: export from the corner demo, wipe the room, reimport with checksums verified", async ({
+  page,
+}) => {
+  await open(page, "corner");
+  const before = await project(page);
+  await page.getByLabel("Exporteer ontwerp").click();
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Projectpakket/ }).click();
+  const zip = await dl;
+  expect(zip.suggestedFilename()).toMatch(/\.zip$/);
+  const path = await zip.path();
+  await page.getByRole("button", { name: "Nieuw / demo" }).click();
+  await page.getByRole("button", { name: /Lege ruimte/ }).click();
+  await expect.poll(async () => (await project(page)).objects.length).toBe(0);
+  await page.locator("input[type=file][accept*='.zip']").setInputFiles(path);
+  await expect
+    .poll(async () => (await project(page)).objects.length)
+    .toBe(before.objects.length);
+  const after = await project(page);
+  expect(after.canvases).toEqual(before.canvases);
+  expect(after.id).toBe(before.id);
+  await expect(page.getByText(/controlesommen kloppen/)).toBeVisible();
+});
+
+test("package with a flipped byte is refused and leaves the project untouched", async ({
+  page,
+}, info) => {
+  await open(page, "corner");
+  await page.getByLabel("Exporteer ontwerp").click();
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Projectpakket/ }).click();
+  const bytes = readFileSync(await (await dl).path());
+  // Corrupt a byte inside the stored data (past the first local header, well before the central directory).
+  const broken = Buffer.from(bytes);
+  broken[Math.floor(broken.length / 2)] ^= 0xff;
+  const before = await project(page);
+  await page.locator("input[type=file][accept*='.zip']").setInputFiles({
+    name: "kapot.zip",
+    mimeType: "application/zip",
+    buffer: broken,
+  });
+  await expect(
+    page.getByText(/Ongeldig projectpakket|controlesom|zipbestand/),
+  ).toBeVisible();
+  expect((await project(page)).objects).toHaveLength(before.objects.length);
+});

@@ -88,3 +88,11 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - Mutatiecontrole: selectierichting tijdelijk omgedraaid → selectiekadertest faalde; teruggezet.
 - `npm test` (Node-tests) en `check`/`build`: zie hieronder bij de laatste run.
 - Niet gedekt: zie docs/E2E.md.
+
+## Versie 0.7 (19 oktober 2026)
+
+- `npm test`: 122 tests geslaagd (render 11, package 6, isometric 5 nieuw). Wachtrijtests gebruiken een nep-runner die echte PNG-bestanden schrijft; **Blender is niet gestart.**
+- `npm run blender:dry`: job + 48 kB GLB gebouwd en gevalideerd; `render_worker.py` compileert.
+- e2e: pakket-roundtrip en beschadigd-pakkettest; de eerste leverde een echte fout op (zip-detectie op bestandsnaam), hersteld met detectie op magic bytes.
+- PDF: isometrische pagina bekeken via Poppler-render: rechte assen, schaal 1:100, geen verborgen-lijnverwijdering.
+- Niet geverifieerd: alles wat Blender zelf doet, rendertijden, panelen-emissie in Blender.

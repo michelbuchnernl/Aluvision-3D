@@ -10,6 +10,7 @@ import {
 import { ProjectStore } from "./store.ts";
 import { ClaudeProvider } from "./claude.ts";
 import { createStudioServer } from "./http.ts";
+import { RenderQueue, RenderService, blenderRunner } from "./renders.ts";
 const host = process.env.STUDIO_HOST ?? "127.0.0.1",
   port = Number(process.env.STUDIO_PORT ?? 8787),
   root = resolve(process.env.STUDIO_DATA_DIR ?? "studio-data");
@@ -61,6 +62,15 @@ const provider = new ClaudeProvider({
   apiKey: process.env.ANTHROPIC_API_KEY,
   enabled: process.env.STUDIO_ENABLE_AI === "1",
 });
+// Blender is optional: without BLENDER_PATH jobs can be queued but are not executed.
+const blenderPath = process.env.BLENDER_PATH;
+const renders = new RenderService(
+  new RenderQueue(store.db, join(root, "renders")),
+  blenderPath
+    ? blenderRunner(blenderPath, resolve("blender/render_worker.py"))
+    : undefined,
+);
+renders.start();
 const origins = [
   `http://localhost:${port}`,
   `http://127.0.0.1:${port}`,
@@ -71,6 +81,7 @@ const origins = [
 const { server } = createStudioServer({
   store,
   provider,
+  renders,
   accessToken,
   allowedOrigins: origins,
   staticRoot: resolve("dist"),
@@ -80,6 +91,7 @@ let closed = false;
 const cleanup = () => {
   if (closed) return;
   closed = true;
+  renders.stop();
   try {
     store.close();
   } finally {
@@ -95,7 +107,7 @@ server.on("error", (e) => {
 });
 server.listen(port, host, () =>
   console.log(
-    `Boormester-server: http://${host}:${port} | Claude ${provider.enabled && provider.apiKey ? "ingeschakeld" : "uitgeschakeld"}`,
+    `Boormester-server: http://${host}:${port} | Claude ${provider.enabled && provider.apiKey ? "ingeschakeld" : "uitgeschakeld"} | Blender ${blenderPath ? "ingesteld" : "niet ingesteld"}`,
   ),
 );
 for (const signal of ["SIGINT", "SIGTERM"] as const)

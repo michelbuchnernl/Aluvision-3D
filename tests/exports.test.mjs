@@ -49,7 +49,7 @@ test("Empty project exports without invalid sum ranges or missing worksheets", (
 });
 test("Technical PDF contains three scaled views and a candid design-check page", () => {
   const pdf = technicalPdf(demoProject());
-  assert.equal(pdf.getNumberOfPages(), 4);
+  assert.equal(pdf.getNumberOfPages(), 5);
   const output = pdf.output();
   assert.ok(output.startsWith("%PDF-"));
   assert.match(output, /Schaal 1:50/);

@@ -1,4 +1,4 @@
-# Bouwstatus — versie 1.2
+# Bouwstatus — versie 1.3
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -75,6 +75,11 @@
 
 - Volledige keten bewezen met een echt serverproces en echte Blender (`npm run render:smoke`, 4,1 s) en opt-in tests met echte Blender (`BLENDER_PATH=… npm test`: render, geknoeide scène → 3 pogingen → failed, ontbrekende executable). Zonder `BLENDER_PATH` worden die drie tests overgeslagen en gemeld.
 - Doorlooptijden op M1 Pro vastgelegd (EEVEE 1080p 2,4 s, 4K 4,3 s; Cycles-CPU 1080p 64 spl 16,7 s). Zie docs/BLENDER.md.
+
+## Toegevoegd in versie 1.3 (browser tegen echte server)
+
+- **Echte fout gevonden en hersteld:** de serververbinding werkte in een browser nooit (`window.fetch` als methode aangeroepen). Daarmee waren eerdere browserclaims over serveropslag, revisies en de Claude-/renderpanelen onbewezen; nu is de serverronde en het renderpaneel in Chrome tegen het echte serverproces getest (`npm run test:e2e:render`, met en zonder Blender).
+- `STUDIO_EXTRA_ORIGINS` (alleen loopback) voor browsertests op een tweede Vite-poort. Nieuwe tests: `tests/client.test.mjs` (2), `e2e-render/` (2).
 
 ## Bewijs
 

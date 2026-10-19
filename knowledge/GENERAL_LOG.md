@@ -25,3 +25,5 @@ Dit zijn implementatie-inzichten uit dit project, geen structurele ontwerprichtl
 2026-10-19: de classificatie "klein bewerking → goedkoopste model" is een heuristiek met zichtbare signalen en reden, geen gemeten kwaliteitsclaim; meet echte uitkomsten voordat je de drempels aanpast.
 
 2026-10-19: een scripted edit die door een formatter-herformattering niet matcht, faalt stil; controleer na elke tekstvervanging dat de wijziging er echt staat (grep) voordat je erop debugt. Ik verloor hier twee debugrondes aan.
+
+2026-10-19: de eerste browsertest tegen het echte serverproces vond een fout die sinds de eerste serverversie bestond (window.fetch als methode aangeroepen → "Illegal invocation"). Meer dan honderd Node-tests zagen dat niet omdat ze een eigen fetcher meegaven. Eerdere uitspraken over een werkende serverkant in de UI waren dus onbewezen.

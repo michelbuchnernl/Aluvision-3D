@@ -9,8 +9,8 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "check": "tsc -b",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "format": "prettier --write src server scripts tests e2e vite.config.ts playwright.config.mjs",
-    "format:check": "prettier --check src server scripts tests e2e vite.config.ts playwright.config.mjs",
+    "format": "prettier --write src server scripts tests e2e vite.config.ts playwright.config.mjs playwright.render.config.mjs e2e-render",
+    "format:check": "prettier --check src server scripts tests e2e vite.config.ts playwright.config.mjs playwright.render.config.mjs e2e-render",
     "dev:env": "node --env-file=.env scripts/dev.mjs",
     "dev:web": "vite --host 127.0.0.1 --port 4173",
     "server": "node --experimental-strip-types server/index.ts",
@@ -20,7 +20,8 @@
     "blender:dry": "node --experimental-strip-types scripts/blender-dry-run.mjs",
     "knowledge:check": "node --experimental-strip-types scripts/knowledge-check.mjs",
     "blender:orientation": "node --experimental-strip-types scripts/blender-orientation.mjs",
-    "render:smoke": "node --experimental-strip-types scripts/render-smoke.mjs"
+    "render:smoke": "node --experimental-strip-types scripts/render-smoke.mjs",
+    "test:e2e:render": "playwright test -c playwright.render.config.mjs"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

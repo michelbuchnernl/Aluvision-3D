@@ -87,8 +87,10 @@ export class StudioClient {
   accessCode = "";
   clientId = uid();
   fetcher: typeof fetch;
-  constructor(fetcher: typeof fetch = fetch) {
-    this.fetcher = fetcher;
+  constructor(fetcher?: typeof fetch) {
+    // window.fetch throws "Illegal invocation" when called as a method of another object, so the default
+    // is wrapped instead of stored directly. Custom fetchers (tests) are used as given.
+    this.fetcher = fetcher ?? ((input, init) => fetch(input, init));
   }
   async session() {
     const result = await this.request<{

@@ -62,3 +62,8 @@ Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headse
 | Regel | Status | Bewijs |
 | --- | --- | --- |
 | Tests tegen een echte externe tool zijn opt-in via een omgevingsvariabele en melden bij overslaan expliciet waarom; de logica blijft apart getest met een nep-runner. | Uitgevoerd met en zonder echte Blender | tests/render-blender.test.mjs, tests/render.test.mjs |
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Sla een globale browserfunctie als `fetch` nooit als eigenschap van een object op om hem daarop aan te roepen; wikkel hem in een pijlfunctie. Een nep-fetcher in Node verbergt deze fout. | Regressietest faalt op de oude code | tests/client.test.mjs |
+| Test een browserclient ook tegen het echte serverproces: node-tests met eigen fetcher bewijzen de browserroute niet. | Browser-getest tegen echte server | e2e-render/server.spec.mjs, docs/E2E.md |

@@ -77,6 +77,22 @@ const origins = [
   "http://localhost:4173",
   "http://127.0.0.1:4173",
   ...(publicOrigin ? [publicOrigin] : []),
+  // Extra local dev origins, e.g. a second Vite port for browser tests. Plain http(s) origins on loopback only.
+  ...(process.env.STUDIO_EXTRA_ORIGINS ?? "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .map((v) => {
+      const u = new URL(v);
+      if (
+        !/^https?:$/.test(u.protocol) ||
+        !["localhost", "127.0.0.1"].includes(u.hostname)
+      )
+        throw Error(
+          "STUDIO_EXTRA_ORIGINS accepteert alleen http(s)://localhost of 127.0.0.1.",
+        );
+      return u.origin;
+    }),
 ];
 const { server } = createStudioServer({
   store,

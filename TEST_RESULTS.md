@@ -128,3 +128,9 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - Standaard `npm test`: 168 geslaagd, 3 overgeslagen (echte-Blender-tests). Met `BLENDER_PATH=/Applications/Blender.app/Contents/MacOS/Blender`: de 3 draaien en slagen (totaal ~4,7 s).
 - `npm run render:smoke` geslaagd (echt serverproces, HTTP, Blender 5.1.1, download gecontroleerd).
 - Niet getest: andere Blender-versies/OS, lange of zware renders, annuleren tijdens het renderen.
+
+## Versie 1.3 — browser tegen echte server (19 oktober 2026)
+
+- Fout: serverclient riep `window.fetch` als methode van het clientobject aan; in Chrome werd daardoor geen enkele API-aanvraag gedaan ("Serververbinding ontbreekt"). Hersteld; regressietest faalt op de oude code en slaagt op de nieuwe.
+- `npm run test:e2e:render`: serverronde (bewaren, autosave, herladen, vergrendeling + overnemen, openen, herstellen) en renderpaneel geslaagd; met `BLENDER_PATH` ook de echte render en PNG-download.
+- Gevolg voor eerdere conclusies: serveropslag, revisies en lease zijn eerder alleen in Node getest; de browserroute is hier voor het eerst bewezen. Het Claude-paneel in de browser blijft zonder echte provider ongetest.

@@ -22,6 +22,11 @@ export interface ImportedAsset {
   provenance: string;
   license?: string;
   triangles: number;
+  /** Set when the bytes come from the server's local library instead of an upload (they are not stored in the browser). */
+  libraryFile?: string;
+  warehouseId?: string;
+  /** Free text from the library metadata (often article numbers); data, not a verified specification. */
+  description?: string;
 }
 export interface GlbContainer {
   json: any;
@@ -194,6 +199,7 @@ export function importedDefinition(
   choice: ImportChoice,
   inspection: Pick<GlbInspection, "size" | "triangles">,
   file: { sha256: string; bytes: number; fileName: string },
+  library?: { libraryFile: string; warehouseId?: string; description?: string },
 ): Definition {
   const name = choice.name.trim(),
     provenance = choice.provenance.trim();
@@ -229,6 +235,17 @@ export function importedDefinition(
         ? { license: choice.license.trim().slice(0, 300) }
         : {}),
       triangles: inspection.triangles,
+      ...(library
+        ? {
+            libraryFile: library.libraryFile,
+            ...(library.warehouseId
+              ? { warehouseId: library.warehouseId.slice(0, 64) }
+              : {}),
+            ...(library.description?.trim()
+              ? { description: library.description.trim().slice(0, 1000) }
+              : {}),
+          }
+        : {}),
     },
   };
 }

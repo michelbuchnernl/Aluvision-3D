@@ -50,13 +50,10 @@ import {
 import Viewport from "./Viewport";
 import type { Tool, ViewportApi, VrState } from "./Viewport";
 import {
-  CATALOG,
   MATERIALS,
   uid,
   clone,
-  demoProject,
-  mediaDemoProject,
-  emptyProject,
+  newProject,
   definition,
   effectiveMaterial,
   isLocked,
@@ -89,6 +86,7 @@ import { AlignmentPanel, MeasurementPanel } from "./SpatialTools";
 import { MediaPanel } from "./MediaPanel";
 import { RenderPanel } from "./RenderPanel";
 import { AssetPanel } from "./AssetPanel";
+import { LibraryPanel } from "./LibraryPanel";
 import { AssemblyInspector, AssemblyLibrary } from "./AssemblyPanel";
 import { assetRegistry } from "./assets";
 import { MediaRuntime } from "./mediaRuntime";
@@ -122,7 +120,7 @@ function loadInitial() {
       }
     }
   } catch {}
-  return demoProject();
+  return newProject();
 }
 function loadVersions(): Version[] {
   try {
@@ -313,6 +311,8 @@ function App() {
       project: () => JSON.parse(JSON.stringify(pRef.current)),
       boxes: () => api.current?.screenBoxes() ?? [],
       selected: () => [...selectedRef.current],
+      // Fixtures for browser tests: loads a project JSON exactly like "Open" would.
+      load: (json: string) => loadRef.current(json),
       assetsLoaded: () =>
         pRef.current.definitions.flatMap((d) =>
           d.asset ? [[d.asset.sha256, assetRegistry.has(d.asset.sha256)]] : [],
@@ -323,6 +323,7 @@ function App() {
     };
   }, []);
   const selectedRef = useRef<string[]>([]);
+  const loadRef = useRef<(json: string) => void>(() => {});
   selectedRef.current = selected;
   const [assetVersion, setAssetVersion] = useState(0);
   useEffect(
@@ -370,13 +371,39 @@ function App() {
     setMeasurePoints([]);
     setAlignmentPreview(null);
   }, [p.id]);
-  const assetKey = p.definitions
-    .flatMap((d) => (d.asset ? [d.asset.sha256] : []))
-    .join(",");
-  useEffect(() => {
-    if (assetKey) void assetRegistry.ensure(assetKey.split(","));
-  }, [assetKey]);
+  const assetItems = p.definitions.flatMap((d) =>
+    d.asset
+      ? [{ sha256: d.asset.sha256, libraryFile: d.asset.libraryFile }]
+      : [],
+  );
+  const assetKey = JSON.stringify(assetItems);
   const announce = (m: string) => setToast(m);
+  useEffect(() => {
+    if (!assetItems.length) return;
+    let cancelled = false;
+    (async () => {
+      // Uploaded models come from this browser's store; library models are fetched from the server and verified.
+      await assetRegistry.ensure(
+        assetItems.filter((i) => !i.libraryFile).map((i) => i.sha256),
+      );
+      const failed = await assetRegistry.ensureFromLibrary(
+        assetItems,
+        async (file) =>
+          (
+            await server.connection.client.blob(
+              `/library/files/${encodeURIComponent(file)}`,
+            )
+          ).arrayBuffer(),
+      );
+      if (failed.length && !cancelled)
+        announce(
+          `${failed.length} bibliotheekmodel(len) konden niet worden geladen (server of bibliotheek niet bereikbaar, of het bestand is gewijzigd); ze staan als oranje kader.`,
+        );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [assetKey]);
   useEffect(() => {
     if (!toast) return;
     const id = setTimeout(() => setToast(""), 4500);
@@ -447,6 +474,11 @@ function App() {
       return;
     }
     setH((h) => commit(h, typeof next === "function" ? next(h.present) : next));
+  };
+  loadRef.current = (json) => {
+    setH((h) => commit(h, parseProject(json)));
+    setSelected([]);
+    setEditGroupId(null);
   };
   useEffect(() => {
     setSelected((prev) => {
@@ -750,7 +782,10 @@ function App() {
         xlsx: new Uint8Array(await e.xlsxBytes(p)),
         assets: new Map(
           p.definitions.flatMap((d) => {
-            const bytes = d.asset && assetRegistry.bytesFor(d.asset.sha256);
+            const bytes =
+              d.asset &&
+              !d.asset.libraryFile &&
+              assetRegistry.bytesFor(d.asset.sha256);
             return d.asset && bytes
               ? [[d.asset.sha256, new Uint8Array(bytes)] as const]
               : [];
@@ -1208,49 +1243,24 @@ function App() {
             {tab === "library" ? (
               <>
                 <div className="library-scroll">
-                  <div className="section-heading">
-                    DEMO-COLLECTIE <span>{CATALOG.length} onderdelen</span>
-                  </div>
-                  <div className="catalog-list">
-                    {CATALOG.filter((d) =>
-                      d.name.toLowerCase().includes(search.toLowerCase()),
-                    ).map((d) => (
-                      <button
-                        className="catalog-card"
-                        key={d.id}
-                        disabled={readOnly || contextLocked}
-                        onClick={() => {
-                          const o = newInstance(p, d.id);
-                          if (editGroupId) o.groupId = editGroupId;
-                          change((q) => ({ ...q, objects: [...q.objects, o] }));
-                          setSelected([o.id]);
-                          setTool("move");
-                        }}
-                      >
-                        <span className={"part-preview " + d.kind}>
-                          <i />
-                          <b />
-                          <em />
-                        </span>
-                        <span className="part-copy">
-                          <strong>{d.name}</strong>
-                          <small>
-                            {d.size.x} × {d.size.y} × {d.size.z} cm
-                          </small>
-                          <span>
-                            {d.kind === "panel"
-                              ? "Projectie"
-                              : d.kind === "table" || d.kind === "projector"
-                                ? "Inrichting"
-                                : "Constructie"}
-                          </span>
-                        </span>
-                        <span className="add-part">
-                          <Plus size={15} />
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                  <LibraryPanel
+                    client={server.connection.client}
+                    project={p}
+                    search={search}
+                    readOnly={readOnly || contextLocked}
+                    onMessage={announce}
+                    onAdd={(def) => {
+                      const known = p.definitions.some((d) => d.id === def.id);
+                      const base = known
+                        ? p
+                        : { ...p, definitions: [...p.definitions, def] };
+                      const o = newInstance(base, def.id);
+                      if (editGroupId) o.groupId = editGroupId;
+                      change({ ...base, objects: [...base.objects, o] });
+                      setSelected([o.id]);
+                      setTool("move");
+                    }}
+                  />
                   <div className="section-heading">
                     GEÏMPORTEERD{" "}
                     <span>
@@ -1327,8 +1337,9 @@ function App() {
                   <div className="library-footnote">
                     <CircleDot size={14} />
                     <p>
-                      Synthetische onderdelen voor ontwerp en demonstratie. Geen
-                      fabrikantcatalogus of constructieberekening.
+                      Modellen uit de AluVision-bibliotheek en eigen GLB-imports
+                      zijn niet geverifieerd: geen fabrikantcatalogus,
+                      certificering of constructieberekening.
                     </p>
                   </div>
                 </div>
@@ -2237,7 +2248,7 @@ function App() {
           <i />
           <span>{freeHeight ? "Vrije hoogte" : "Vloermodus"}</span>
           <i />
-          <button onClick={() => setModal("new")}>Nieuw / demo</button>
+          <button onClick={() => setModal("new")}>Nieuw ontwerp</button>
         </div>
       </footer>
       <input
@@ -2607,43 +2618,17 @@ function App() {
                 </p>
                 <div className="new-options">
                   <button
-                    className="button"
+                    className="button primary"
                     disabled={readOnly}
                     onClick={() => {
                       snapshot();
-                      change(emptyProject());
+                      change(newProject());
                       setSelected([]);
                       setModal(null);
                     }}
                   >
                     <Plus size={18} />
-                    Lege ruimte
-                  </button>
-                  <button
-                    className="button primary"
-                    disabled={readOnly}
-                    onClick={() => {
-                      snapshot();
-                      change(demoProject());
-                      setSelected([]);
-                      setModal(null);
-                    }}
-                  >
-                    <Box size={18} />
-                    Laad 4 × 8 m demo
-                  </button>
-                  <button
-                    className="button"
-                    disabled={readOnly}
-                    onClick={() => {
-                      snapshot();
-                      change(mediaDemoProject());
-                      setSelected([]);
-                      setModal(null);
-                    }}
-                  >
-                    <Clapperboard size={18} />
-                    Laad hoekcanvas-demo (90°)
+                    Lege ruimte (8 × 4 × 3 m)
                   </button>
                 </div>
               </>

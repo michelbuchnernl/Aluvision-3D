@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { demoProject, serialize } from "../src/model.ts";
 import { readFileSync } from "node:fs";
 
 const blender = !!process.env.BLENDER_PATH;
@@ -8,8 +9,13 @@ test("render panel: connect to the server, queue a render from the UI; with Blen
 }) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
-  await page.waitForFunction(() => document.querySelector("canvas"));
+  await page.goto("/?e2e=1");
+  await page.waitForFunction(() => window.__studio);
+  await page.evaluate(
+    (json) => window.__studio.load(json),
+    serialize(demoProject()),
+  );
+  await page.waitForFunction(() => window.__studio.boxes().length > 0);
   // Save a viewpoint so the job has a named camera.
   await page.getByTitle("Standpunt opslaan").click();
   // Put the project on the server.

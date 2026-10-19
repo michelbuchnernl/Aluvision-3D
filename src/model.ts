@@ -236,6 +236,13 @@ export const uid = () => {
 };
 export const clone = <T>(value: T): T => structuredClone(value);
 const now = () => new Date().toISOString();
+/**
+ * A fresh design for the app: an empty room with no parts at all. Parts come from the AluVision library or from
+ * GLB imports. (emptyProject below still carries the legacy synthetic demo catalog for old saved projects and tests.)
+ */
+export function newProject(): Project {
+  return { ...emptyProject(), definitions: [] };
+}
 export function emptyProject(): Project {
   return {
     schemaVersion: 1,
@@ -875,6 +882,14 @@ function validSource(d: any) {
     a.provenance.length <= 500 &&
     (a.license === undefined ||
       (typeof a.license === "string" && a.license.length <= 300)) &&
+    (a.libraryFile === undefined ||
+      (typeof a.libraryFile === "string" &&
+        /^[A-Za-z0-9][\w.+-]{0,160}\.glb$/.test(a.libraryFile) &&
+        !a.libraryFile.includes(".."))) &&
+    (a.warehouseId === undefined ||
+      (typeof a.warehouseId === "string" && a.warehouseId.length <= 64)) &&
+    (a.description === undefined ||
+      (typeof a.description === "string" && a.description.length <= 1000)) &&
     Number.isSafeInteger(a.triangles) &&
     a.triangles >= 0 &&
     Math.max(d.size.x, d.size.y, d.size.z) <= 100000

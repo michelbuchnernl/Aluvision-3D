@@ -1,0 +1,230 @@
+import { useEffect, useMemo, useState } from "react";
+import { Plus, RefreshCw, AlertTriangle } from "lucide-react";
+import { uid } from "./model";
+import type { Definition, Project } from "./model";
+import { importedDefinition } from "./assetImport";
+import { assetRegistry, sha256OfBytes } from "./assets";
+import type { StudioClient } from "./serverClient";
+export interface LibraryModel {
+  id: string;
+  name: string;
+  file: string;
+  bytes: number;
+  sha256: string;
+  triangles: number;
+  sizeCm: { x: number; y: number; z: number };
+  status: "ready" | "refused";
+  reason?: string;
+  notes: string[];
+  description: string;
+  domain?: string;
+  provenance: string;
+  url?: string;
+}
+interface Listing {
+  available: boolean;
+  hint?: string;
+  source?: string;
+  summary?: { ready: number; refused: number; missing: number };
+  models: LibraryModel[];
+}
+const mb = (n: number) =>
+  n >= 1e6
+    ? `${(n / 1e6).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(n / 1e3))} kB`;
+const cm = (n: number) => (n >= 100 ? Math.round(n) : Number(n.toFixed(1)));
+const PAGE = 80;
+/** Lists the server's AluVision GLB library and adds a model (and one instance of it) to the project on demand. */
+export function LibraryPanel({
+  client,
+  project: p,
+  search,
+  readOnly,
+  onAdd,
+  onMessage,
+}: {
+  client: StudioClient;
+  project: Project;
+  search: string;
+  readOnly: boolean;
+  onAdd: (def: Definition) => void;
+  onMessage: (message: string) => void;
+}) {
+  const [listing, setListing] = useState<Listing | null>(null),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState<string | null>(null),
+    [limit, setLimit] = useState(PAGE),
+    [showRefused, setShowRefused] = useState(false);
+  const load = async () => {
+    setError("");
+    try {
+      setListing(await client.request<Listing>("/library"));
+    } catch (e) {
+      setListing(null);
+      setError(
+        e instanceof Error
+          ? e.message
+          : "De bibliotheek kon niet worden geladen.",
+      );
+    }
+  };
+  useEffect(() => {
+    void load();
+  }, []);
+  useEffect(() => setLimit(PAGE), [search, showRefused]);
+  const shown = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (listing?.models ?? [])
+      .filter((m) =>
+        showRefused ? m.status === "refused" : m.status === "ready",
+      )
+      .filter(
+        (m) =>
+          !q ||
+          m.name.toLowerCase().includes(q) ||
+          m.description.toLowerCase().includes(q),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name, "nl", { numeric: true }));
+  }, [listing, search, showRefused]);
+  const add = async (m: LibraryModel) => {
+    const existing = p.definitions.find((d) => d.asset?.sha256 === m.sha256);
+    if (existing) return onAdd(existing);
+    setBusy(m.file);
+    try {
+      const blob = await client.blob(
+        `/library/files/${encodeURIComponent(m.file)}`,
+      );
+      const bytes = await blob.arrayBuffer();
+      const sha = await sha256OfBytes(bytes);
+      if (sha !== m.sha256)
+        throw Error(
+          "De controlesom van het bestand wijkt af van de bibliotheekmanifest; het model is niet toegevoegd.",
+        );
+      const inspection = await assetRegistry.add(sha, bytes, false);
+      const def = importedDefinition(
+        uid(),
+        {
+          name: m.name,
+          units: "m",
+          role: "custom",
+          provenance:
+            m.provenance || "AluVision-bibliotheek (SketchUp 3D Warehouse)",
+        },
+        inspection,
+        { sha256: sha, bytes: bytes.byteLength, fileName: m.file },
+        { libraryFile: m.file, warehouseId: m.id, description: m.description },
+      );
+      const off = ["x", "y", "z"].some(
+        (k) =>
+          Math.abs((def.size as any)[k] - (m.sizeCm as any)[k]) >
+          0.05 * Math.max(1, (m.sizeCm as any)[k]),
+      );
+      onAdd(def);
+      if (off)
+        onMessage(
+          `${m.name}: de gemeten afmeting wijkt meer dan 5% af van het manifest (${cm(def.size.x)} × ${cm(def.size.y)} × ${cm(def.size.z)} cm).`,
+        );
+    } catch (e) {
+      onMessage(
+        e instanceof Error ? e.message : "Model kon niet worden geladen.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <>
+      <div className="section-heading">
+        ALUVISION-BIBLIOTHEEK{" "}
+        <span>
+          {listing?.summary
+            ? `${listing.summary.ready} beschikbaar`
+            : listing
+              ? "niet beschikbaar"
+              : "laden…"}
+        </span>
+      </div>
+      {error && (
+        <p className="media-warning" style={{ margin: "0 12px" }}>
+          {error} De bibliotheek staat op de server: start die met npm run dev.
+        </p>
+      )}
+      {listing && !listing.available && (
+        <p className="media-warning" style={{ margin: "0 12px" }}>
+          {listing.hint}
+        </p>
+      )}
+      {listing?.available && (
+        <div className="library-filters">
+          <label className="media-check">
+            <input
+              type="checkbox"
+              checked={showRefused}
+              onChange={(e) => setShowRefused(e.target.checked)}
+            />
+            Toon geweigerde ({listing.summary?.refused ?? 0})
+          </label>
+          <button
+            className="button subtle"
+            onClick={load}
+            aria-label="Bibliotheek vernieuwen"
+          >
+            <RefreshCw size={13} />
+          </button>
+        </div>
+      )}
+      <div className="catalog-list">
+        {shown.slice(0, limit).map((m) => (
+          <button
+            className="catalog-card"
+            key={m.file}
+            disabled={readOnly || busy !== null || m.status !== "ready"}
+            title={m.status === "refused" ? m.reason : m.description}
+            onClick={() => void add(m)}
+          >
+            <span className="part-preview asset">
+              <i />
+              <b />
+              <em />
+            </span>
+            <span className="part-copy">
+              <strong>{m.name}</strong>
+              <small>
+                {cm(m.sizeCm.x)} × {cm(m.sizeCm.y)} × {cm(m.sizeCm.z)} cm ·{" "}
+                {mb(m.bytes)}
+              </small>
+              <span>
+                {m.status === "refused"
+                  ? (m.reason ?? "geweigerd")
+                  : m.description.split("\n")[0] || "AluVision-bibliotheek"}
+                {m.notes.some((n) => /wijken af/.test(n)) && (
+                  <AlertTriangle
+                    size={11}
+                    style={{ marginLeft: 4 }}
+                    aria-label="maat wijkt af"
+                  />
+                )}
+              </span>
+            </span>
+            <span className="add-part">
+              {busy === m.file ? "…" : <Plus size={15} />}
+            </span>
+          </button>
+        ))}
+        {listing?.available && shown.length === 0 && (
+          <p className="fine-print" style={{ padding: "6px 4px" }}>
+            Geen modellen gevonden voor &ldquo;{search}&rdquo;.
+          </p>
+        )}
+        {shown.length > limit && (
+          <button
+            className="button full"
+            onClick={() => setLimit(limit + PAGE)}
+          >
+            Toon meer ({shown.length - limit})
+          </button>
+        )}
+      </div>
+    </>
+  );
+}

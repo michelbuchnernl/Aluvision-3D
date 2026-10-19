@@ -43,6 +43,8 @@ export interface PackageManifest {
   }[];
   /** SHA-256 of imported models whose bytes were not available when the package was made. */
   assetsMissing?: string[];
+  /** Models used from the local AluVision library (not embedded); the library must provide them again. */
+  libraryAssets?: { file: string; sha256: string; name: string }[];
   notes: string[];
 }
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -73,7 +75,7 @@ export async function buildPackage(
       "manifest.json bestandslijst met SHA-256-controlesommen",
       "",
       "Mediabestanden zitten niet in dit pakket; zie mediaToReattach in manifest.json.",
-      "De catalogus is synthetisch (demo); er zijn geen fabrikantgegevens of constructieve claims.",
+      "Modellen zijn synthetische demo-onderdelen of geïmporteerd (niet geverifieerd); er zijn geen fabrikantgegevens of constructieve claims.",
       "",
     ].join("\n"),
   );
@@ -83,8 +85,31 @@ export async function buildPackage(
     "bom.xlsx": parts.xlsx,
     "README.txt": readme,
   };
+  // Library-backed models stay in the local AluVision library: they are listed (file + checksum), not embedded.
+  const libraryAssets = [
+    ...new Map(
+      p.definitions.flatMap((d) =>
+        d.asset?.libraryFile
+          ? [
+              [
+                d.asset.sha256,
+                {
+                  file: d.asset.libraryFile,
+                  sha256: d.asset.sha256,
+                  name: d.name,
+                },
+              ] as const,
+            ]
+          : [],
+      ),
+    ).values(),
+  ];
   const importedShas = [
-    ...new Set(p.definitions.flatMap((d) => (d.asset ? [d.asset.sha256] : []))),
+    ...new Set(
+      p.definitions.flatMap((d) =>
+        d.asset && !d.asset.libraryFile ? [d.asset.sha256] : [],
+      ),
+    ),
   ];
   const assetsMissing: string[] = [];
   for (const sha of importedShas) {
@@ -122,9 +147,12 @@ export async function buildPackage(
         sha256: m.sha256,
       })),
     assetsMissing,
+    libraryAssets,
     notes: [
-      "Synthetische demo-catalogus",
-      ...(importedShas.length
+      ...(p.definitions.some((d) => d.source === "synthetic")
+        ? ["Bevat synthetische demo-onderdelen"]
+        : []),
+      ...(importedShas.length || libraryAssets.length
         ? [
             "Bevat geïmporteerde modellen: niet geverifieerd, herkomst in project.json",
           ]
@@ -231,9 +259,20 @@ export async function readPackage(bytes: Uint8Array): Promise<ReadPackage> {
     : [];
   const lacking = [
     ...new Set(
-      project.definitions.flatMap((d) => (d.asset ? [d.asset.sha256] : [])),
+      project.definitions.flatMap((d) =>
+        d.asset && !d.asset.libraryFile ? [d.asset.sha256] : [],
+      ),
     ),
   ].filter((sha) => !assets.has(sha));
+  const lib = new Set(
+    project.definitions.flatMap((d) =>
+      d.asset?.libraryFile ? [d.asset.sha256] : [],
+    ),
+  );
+  if (lib.size)
+    warnings.push(
+      `${lib.size} model(len) komen uit de lokale AluVision-bibliotheek en worden bij het openen van de server geladen en op controlesom gecontroleerd.`,
+    );
   if (lacking.length)
     warnings.push(
       `${lacking.length} geïmporteerd(e) model(len) zit(ten) niet in het pakket en worden als oranje kader getoond tot je ze opnieuw importeert.`,

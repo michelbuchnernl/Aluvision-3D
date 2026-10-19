@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { demoProject, serialize } from "../src/model.ts";
 
 const count = (page) =>
   page.evaluate(() => window.__studio.project().objects.length);
@@ -9,7 +10,12 @@ test("server round trip in the browser: save, edit + autosave, reload, open from
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/?e2e=1");
-  await page.waitForFunction(() => window.__studio?.boxes().length > 0);
+  await page.waitForFunction(() => window.__studio);
+  await page.evaluate(
+    (json) => window.__studio.load(json),
+    serialize(demoProject()),
+  );
+  await page.waitForFunction(() => window.__studio.boxes().length > 0);
   const base = await count(page);
 
   await page.getByRole("button", { name: "Serverprojecten" }).click();

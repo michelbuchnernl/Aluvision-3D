@@ -8,6 +8,8 @@ import { ClaudeProvider, ClaudeService } from "./claude.ts";
 import { StudioError, fail } from "./errors.ts";
 import { MAX_ATTEMPTS } from "./renders.ts";
 import type { RenderService } from "./renders.ts";
+import type { Library } from "./library.ts";
+import { createReadStream } from "node:fs";
 import { readFileSync } from "node:fs";
 interface Session {
   id: string;
@@ -18,6 +20,7 @@ interface Options {
   store: ProjectStore;
   provider?: ClaudeProvider;
   renders?: RenderService;
+  library?: Library;
   accessToken?: string;
   allowedOrigins?: string[];
   staticRoot?: string;
@@ -234,6 +237,42 @@ export function createStudioServer(options: Options) {
         return;
       }
       const renders = options.renders;
+      if (url.pathname === "/api/library" && method === "GET") {
+        send(
+          200,
+          options.library?.listing() ?? {
+            available: false,
+            hint: "Geen bibliotheek ingesteld op de server.",
+            models: [],
+          },
+        );
+        return;
+      }
+      if (
+        path[1] === "library" &&
+        path[2] === "files" &&
+        path.length === 4 &&
+        method === "GET"
+      ) {
+        const hit = options.library?.pathFor(path[3]);
+        if (!hit)
+          fail(
+            404,
+            "library_file_not_found",
+            "Bibliotheekbestand niet gevonden of niet beschikbaar.",
+          );
+        res.writeHead(200, {
+          "Content-Type": "model/gltf-binary",
+          "Content-Length": hit!.model.bytes,
+          // The file name carries the Warehouse id and the manifest pins the checksum, so it is safe to cache.
+          "Cache-Control": "private, max-age=3600",
+          "X-Content-SHA256": hit!.model.sha256,
+        });
+        createReadStream(hit!.path)
+          .on("error", () => res.destroy())
+          .pipe(res);
+        return;
+      }
       if (url.pathname === "/api/render/status" && method === "GET") {
         send(200, {
           available: !!renders,

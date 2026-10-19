@@ -21,7 +21,7 @@ export function glbScene(input: Project, includeHidden = false) {
     studioProjectId: p.id,
     sourceUnits: "cm",
     exportedUnits: "m",
-    synthetic: true,
+    synthetic: p.definitions.every((d) => d.source === "synthetic"),
     roomCm: p.room,
     instanceCount: selected.length,
     includesHidden: includeHidden,

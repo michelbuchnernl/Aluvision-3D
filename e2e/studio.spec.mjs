@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { demoProject, mediaDemoProject, serialize } from "../src/model.ts";
 
 const open = async (page, demo) => {
   const errors = [];
@@ -20,15 +21,20 @@ const open = async (page, demo) => {
       errors.push(`${r.status()} ${r.url()}`),
   );
   await page.goto("/?e2e=1");
-  await page.waitForFunction(
-    () => window.__studio && window.__studio.boxes().length > 0,
-  );
-  if (demo === "corner") {
-    await page.getByRole("button", { name: "Nieuw / demo" }).click();
-    await page.getByRole("button", { name: /hoekcanvas-demo/ }).click();
-    await page.waitForFunction(
-      () => window.__studio.project().canvases?.length === 1,
+  await page.waitForFunction(() => window.__studio);
+  // The product starts with an empty room; the legacy synthetic demo is injected as a fixture.
+  const fixture =
+    demo === "empty"
+      ? undefined
+      : demo === "corner"
+        ? mediaDemoProject()
+        : demoProject();
+  if (fixture) {
+    await page.evaluate(
+      (json) => window.__studio.load(json),
+      serialize(fixture),
     );
+    await page.waitForFunction(() => window.__studio.boxes().length > 0);
   }
   return errors;
 };
@@ -276,7 +282,7 @@ test("portable package: export from the corner demo, wipe the room, reimport wit
   const zip = await dl;
   expect(zip.suggestedFilename()).toMatch(/\.zip$/);
   const path = await zip.path();
-  await page.getByRole("button", { name: "Nieuw / demo" }).click();
+  await page.getByRole("button", { name: "Nieuw ontwerp" }).click();
   await page.getByRole("button", { name: /Lege ruimte/ }).click();
   await expect.poll(async () => (await project(page)).objects.length).toBe(0);
   await page.locator("input[type=file][accept*='.zip']").setInputFiles(path);
@@ -427,7 +433,7 @@ test("imported model can travel in a package and come back after the asset store
       req.onsuccess = req.onerror = req.onblocked = () => r();
     });
   });
-  await page.getByRole("button", { name: "Nieuw / demo" }).click();
+  await page.getByRole("button", { name: "Nieuw ontwerp" }).click();
   await page.getByRole("button", { name: /Lege ruimte/ }).click();
   await expect.poll(async () => (await project(page)).objects.length).toBe(0);
   await page.locator("input[type=file][accept*='.zip']").setInputFiles(zipPath);

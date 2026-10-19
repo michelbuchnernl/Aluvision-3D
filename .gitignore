@@ -15,3 +15,6 @@ playwright-report/
 test-results/
 __pycache__/
 *.pyc
+
+# Generated 3D Warehouse library (large binaries); rebuild with the scripts in scripts/library/
+/library/

@@ -67,3 +67,9 @@ Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headse
 | --- | --- | --- |
 | Sla een globale browserfunctie als `fetch` nooit als eigenschap van een object op om hem daarop aan te roepen; wikkel hem in een pijlfunctie. Een nep-fetcher in Node verbergt deze fout. | Regressietest faalt op de oude code | tests/client.test.mjs |
 | Test een browserclient ook tegen het echte serverproces: node-tests met eigen fetcher bewijzen de browserroute niet. | Browser-getest tegen echte server | e2e-render/server.spec.mjs, docs/E2E.md |
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Behandel een bibliotheekmanifest als onbetrouwbare data: valideer elk veld, serveer alleen items met status ready en een nog kloppende grootte, en controleer bij het laden de checksum die het project bewaart. | Unit- en e2e-getest | tests/library.test.mjs, e2e-render/library.spec.mjs |
+| Een `.gitignore`-regel voor een datamap moet aan de root verankerd zijn (`/library/`), anders sluit hij ook scripts met dezelfde mapnaam uit; bewaak dat met een test. | Unit-getest | tests/library.test.mjs |
+| Genereer JSON nooit met Python's standaard `allow_nan`: `Infinity` is geen geldige JSON; gebruik `allow_nan=False` en maak niet-eindige waarden `null`. | Uitgevoerd op het echte manifest | tests/library.test.mjs, scripts/library/build_manifest.py |

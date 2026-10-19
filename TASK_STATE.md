@@ -1,4 +1,4 @@
-# Bouwstatus — versie 1.3
+# Bouwstatus — versie 1.4
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -80,6 +80,13 @@
 
 - **Echte fout gevonden en hersteld:** de serververbinding werkte in een browser nooit (`window.fetch` als methode aangeroepen). Daarmee waren eerdere browserclaims over serveropslag, revisies en de Claude-/renderpanelen onbewezen; nu is de serverronde en het renderpaneel in Chrome tegen het echte serverproces getest (`npm run test:e2e:render`, met en zonder Blender).
 - `STUDIO_EXTRA_ORIGINS` (alleen loopback) voor browsertests op een tweede Vite-poort. Nieuwe tests: `tests/client.test.mjs` (2), `e2e-render/` (2).
+
+## Toegevoegd in versie 1.4 (AluVision-bibliotheek in plaats van synthetische onderdelen)
+
+- De synthetische bibliotheek en demo's zijn uit het product; de bibliotheek is nu de lokale AluVision-map (`library/aluvision`, 555 bruikbare GLB's via `manifest.json`), geserveerd door de lokale server, met checksumcontrole en verwijzingen in plaats van bytes in het project. Nieuw ontwerp = lege ruimte. Zie docs/LIBRARY.md.
+- `/library/` is git-ignored en bewaakt door een test; `scripts/library/` is weer trackable (de oude regel `library/` sloot ze per ongeluk uit). De manifestscript schreef ongeldige JSON (`-Infinity`) en is aangepast.
+- Pakketten verwijzen naar bibliotheekmodellen i.p.v. ze in te sluiten. Bekende grens: scène-GLB/Blender-render met veel zware bibliotheekmodellen.
+- De oude synthetische definities blijven alleen in de code voor oude projecten en testfixtures.
 
 ## Bewijs
 

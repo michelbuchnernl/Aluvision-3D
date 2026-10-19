@@ -19,9 +19,12 @@ export function buildWorkbook(p: Project) {
   wb.created = new Date(p.updatedAt);
   wb.title = p.name;
   const imported = p.definitions.filter((d) => d.source === "imported");
-  wb.subject = imported.length
-    ? "Synthetische demo-onderdelen en geïmporteerde modellen (niet geverifieerd); geen fabrikantcatalogus"
-    : "Synthetische demo-onderdelen; geen fabrikantcatalogus";
+  const synthetic = p.definitions.some((d) => d.source === "synthetic");
+  wb.subject = !synthetic
+    ? "Geïmporteerde modellen (AluVision-bibliotheek of eigen GLB), niet geverifieerd; geen fabrikantcatalogus"
+    : imported.length
+      ? "Synthetische demo-onderdelen en geïmporteerde modellen (niet geverifieerd); geen fabrikantcatalogus"
+      : "Synthetische demo-onderdelen; geen fabrikantcatalogus";
   const structural = p.objects.filter((o) => !definition(p, o).decorative),
     decorative = p.objects.filter((o) => definition(p, o).decorative);
   const summary = wb.addWorksheet("Onderdelen");
@@ -171,9 +174,11 @@ export function buildWorkbook(p: Project) {
     },
     {
       key: "Herkomst",
-      value: imported.length
-        ? "Synthetische demo-onderdelen en geïmporteerde GLB-modellen (blad Geïmporteerd); geïmporteerd is niet geverifieerd"
-        : "Proceduraal gegenereerde synthetische demo-onderdelen",
+      value: !synthetic
+        ? "Geïmporteerde GLB-modellen (AluVision-bibliotheek of eigen import; zie blad Geïmporteerd): niet geverifieerd"
+        : imported.length
+          ? "Synthetische demo-onderdelen en geïmporteerde GLB-modellen (blad Geïmporteerd); geïmporteerd is niet geverifieerd"
+          : "Proceduraal gegenereerde synthetische demo-onderdelen",
     },
     {
       key: "Constructieve status",
@@ -266,7 +271,7 @@ export function technicalPdf(p: Project, screenshot?: string) {
     pdf.setFontSize(7);
     pdf.setTextColor(120, 140, 132);
     pdf.text(
-      `Concept - synthetische onderdelen | ${scale ? `Schaal 1:${scale} bij afdruk op 100%` : "Aanvullende documentatie - niet op schaal"}`,
+      `Concept - ${p.definitions.some((d) => d.source === "synthetic") ? "synthetische onderdelen" : "niet geverifieerde modellen"} | ${scale ? `Schaal 1:${scale} bij afdruk op 100%` : "Aanvullende documentatie - niet op schaal"}`,
       margin,
       193,
     );
@@ -473,7 +478,9 @@ export function technicalPdf(p: Project, screenshot?: string) {
     `Aantal fysieke exemplaren: ${p.objects.length}.`,
     `Grensfouten: ${errors.length}.`,
     `Hoogte 300 cm is een demo-aanname, tenzij door de gebruiker gewijzigd.`,
-    `Alle onderdelen zijn synthetisch: geen fabrikantcatalogus, certificering of constructieve goedkeuring.`,
+    p.definitions.some((d) => d.source === "synthetic")
+      ? `Synthetische onderdelen zijn demo-onderdelen: geen fabrikantcatalogus, certificering of constructieve goedkeuring.`
+      : `Alle modellen zijn geïmporteerd (AluVision-bibliotheek of eigen GLB) en niet geverifieerd: geen fabrikantcatalogus, certificering of constructieve goedkeuring.`,
     `Aanzichten tonen conceptuele omhullingen, geen toleranties, verbindingen of productiedetails.`,
     `Excel bevat ook onzichtbare onderdelen; PDF-tekeningen volgen de zichtbare scene.`,
     `Posities en maten komen uit revisie ${p.updatedAt}.`,

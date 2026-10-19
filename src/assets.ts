@@ -118,6 +118,40 @@ export class AssetRegistry {
         ),
     );
   }
+  /**
+   * Loads library-backed models from the server on demand. Each download is verified against the checksum stored in
+   * the project, so a changed library file is refused instead of silently altering the design.
+   */
+  async ensureFromLibrary(
+    items: { sha256: string; libraryFile?: string }[],
+    download: (file: string) => Promise<ArrayBuffer>,
+  ): Promise<string[]> {
+    const failed: string[] = [];
+    await Promise.all(
+      items
+        .filter((i) => i.libraryFile && !this.scenes.has(i.sha256))
+        .map(async (i) => {
+          const key = "lib:" + i.sha256;
+          const task =
+            this.inflight.get(key) ??
+            (async () => {
+              try {
+                const bytes = await download(i.libraryFile!);
+                if ((await sha256OfBytes(bytes)) !== i.sha256) {
+                  failed.push(i.libraryFile!);
+                  return;
+                }
+                await this.add(i.sha256, bytes, false);
+              } catch {
+                failed.push(i.libraryFile!);
+              }
+            })().finally(() => this.inflight.delete(key));
+          this.inflight.set(key, task);
+          await task;
+        }),
+    );
+    return failed;
+  }
   clear() {
     this.bytes.clear();
     this.scenes.clear();

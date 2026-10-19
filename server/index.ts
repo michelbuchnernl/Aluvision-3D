@@ -11,6 +11,7 @@ import { ProjectStore } from "./store.ts";
 import { ClaudeProvider } from "./claude.ts";
 import { createStudioServer } from "./http.ts";
 import { RenderQueue, RenderService, blenderRunner } from "./renders.ts";
+import { Library } from "./library.ts";
 const host = process.env.STUDIO_HOST ?? "127.0.0.1",
   port = Number(process.env.STUDIO_PORT ?? 8787),
   root = resolve(process.env.STUDIO_DATA_DIR ?? "studio-data");
@@ -98,6 +99,7 @@ const { server } = createStudioServer({
   store,
   provider,
   renders,
+  library: new Library(process.env.STUDIO_LIBRARY_DIR ?? "library/aluvision"),
   accessToken,
   allowedOrigins: origins,
   staticRoot: resolve("dist"),

@@ -134,3 +134,10 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - Fout: serverclient riep `window.fetch` als methode van het clientobject aan; in Chrome werd daardoor geen enkele API-aanvraag gedaan ("Serververbinding ontbreekt"). Hersteld; regressietest faalt op de oude code en slaagt op de nieuwe.
 - `npm run test:e2e:render`: serverronde (bewaren, autosave, herladen, vergrendeling + overnemen, openen, herstellen) en renderpaneel geslaagd; met `BLENDER_PATH` ook de echte render en PNG-download.
 - Gevolg voor eerdere conclusies: serveropslag, revisies en lease zijn eerder alleen in Node getest; de browserroute is hier voor het eerst bewezen. Het Claude-paneel in de browser blijft zonder echte provider ongetest.
+
+## Versie 1.4 — AluVision-bibliotheek (19 oktober 2026)
+
+- tests/library.test.mjs (8): manifestparsing en weigeringen, alleen *ready* en ongewijzigde bestanden worden geserveerd, `+` in bestandsnamen, HTTP, en — met de echte bibliotheek aanwezig — alle 555 bestanden bestaan, voldoen aan de importergrenzen en hun SHA-256 klopt; git-ignore-bewaking.
+- Browser tegen de echte server (`e2e-render/library.spec.mjs`): het product start leeg, geen oude demo-onderdelen zichtbaar, zoeken en een echt model toevoegen, herladen haalt het opnieuw van de server, pakket bevat een verwijzing en geen model.
+- Steekproef: van 64 modellen komt de gemeten afmeting bij 62 binnen 2 % van het manifest; de twee afwijkingen zijn POP-deuren (2–3 %). Zes modellen met ingebedde textures kon Node niet parsen (`self is not defined`, een Node-beperking); in de browser laden ze.
+- Niet getest: render van scènes met meerdere bibliotheekmodellen, prestaties met tientallen zware modellen, het toevoegen van alle 555 modellen.

@@ -116,3 +116,9 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - e2e: opslaan, tweede exemplaar plaatsen, lid verwijderen, afwijking tonen, terugzetten, uniek maken, herstel na herladen.
 - Een eerste e2e-fout kwam doordat een scripted wijziging na formattering niet was toegepast (selectieherstel); daarna daadwerkelijk toegepast en getest.
 - Niet geverifieerd: grote assembly's/prestaties, samenspel met AI-voorstellen, serveropslag-roundtrip met assembly's in de browser.
+
+## Versie 1.1 — eerste echte Blender-run (19 oktober 2026)
+
+- Blender 5.1.1 (build 2026-04-14), macOS, headless: `npm run blender:dry -- --run` en `npm run blender:orientation` geslaagd; resultaten in docs/BLENDER.md.
+- Gevonden: gezichtsveld horizontaal in plaats van verticaal; hersteld en opnieuw gerenderd. Haze-gedrag vastgelegd (alleen demping).
+- Niet getest: wachtrij met echte Blender, Cycles, 4K, andere Blender-versies, Blender-MCP.

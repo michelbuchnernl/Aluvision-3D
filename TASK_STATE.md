@@ -1,4 +1,4 @@
-# Bouwstatus — versie 1.0
+# Bouwstatus — versie 1.1
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -66,6 +66,11 @@
 - Groepsbewerkingen (opheffen, hergroeperen, dupliceren) en projectvalidatie houden assembly-verwijzingen consistent.
 - 15 nieuwe Node-tests en 1 e2e-test (168 / 11).
 
+## Toegevoegd in versie 1.1 (eerste echte Blender-run)
+
+- De Blender-worker draaide voor het eerst echt (Blender 5.1.1 headless): GLB-import, eenheden, asmapping, links/rechts, paneelemissie en 90°-hoek bevestigd; één fout gevonden en hersteld (gezichtsveld horizontaal i.p.v. verticaal). Haze is alleen afstandsdemping. Zie docs/BLENDER.md met de resultatentabel en wat nog open staat.
+- Nieuw: `npm run blender:orientation` en `blender/diag_bbox.py` als herhaalbare controle. De Blender-MCP is niet gebruikt (geen open Blender-venster).
+
 ## Bewijs
 
 81 tests slagen, inclusief client → echte HTTP → fake Claude → preview → revisie, CLI-start/herstart, proceslock, budgetconcurrency, hiërarchie, uitlijning, meten en echte GLB-roundtrips. TypeScript/productie-build, formatter, diff-whitespacecontrole slagen. Productieaudit meldt 0 kwetsbaarheden. Browserobservatie blijft geblokkeerd door het eerder gemelde URL-beveiligingsbeleid. Geen WebGL/UI/Safari-acceptatie geclaimd. Zie TEST_RESULTS.
@@ -91,7 +96,7 @@ Editor: http://localhost:4173. API: 8787. Productie: `npm run build` en `npm sta
 1. Resterende MANUAL_QA-punten buiten de e2e-dekking, plus visuele regressie met referentiebeelden.
 2. Gedeelde assembly-definities, socket-editor en magnetische sleep-snapping; serveropslag van modellen; andere importformaten.
 3. Echte headset-/emulatorcontrole van VR; media-export in projectpakket; schermafbeelding-/regressielus.
-4. Eerste echte Blender-run (docs/BLENDER.md), GLB-import/assetpackage, media-bestanden in het pakket.
+4. Wachtrij end-to-end met echte Blender, rendertijden/Cycles, haze afstellen, media-bestanden in het pakket.
 5. Modelroutering/kennisdistillatie en volledige referentieacceptatie.
 
 Een geslaagde API-/buildtest is geen browseracceptatie. Dit bestand belooft geen zelfstandig achtergrondproces nadat de beurt is beëindigd. Bij hervatten: inspecteer de echte branch/status en de actuele documenten voordat je verder bouwt.

@@ -5,8 +5,7 @@
 <job_dir> must contain job.json (see src/renderSpec.ts) and scene.glb. Renders go to <job_dir>/out/,
 and a final line "STUDIO_RESULT {json}" reports the outputs with SHA-256 checksums.
 
-STATUS: written against the Blender 4.x Python API but NOT yet executed in Blender. Treat every behaviour
-here as unverified until the first real run (see docs/BLENDER.md).
+STATUS: first headless run on Blender 5.1.1 succeeded (see docs/BLENDER.md for what was and was not checked).
 """
 import hashlib
 import json
@@ -148,6 +147,8 @@ def make_camera(bpy, scene, cam_spec):
     else:
         data.type = "PERSP"
         data.lens_unit = "FOV"
+        # The editor's field of view is vertical; Blender's default sensor fit would apply it horizontally.
+        data.sensor_fit = "VERTICAL"
         data.angle = math.radians(cam_spec["fovDegrees"])
     obj = bpy.data.objects.new(cam_spec["name"], data)
     scene.collection.objects.link(obj)

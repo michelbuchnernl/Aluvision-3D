@@ -53,3 +53,8 @@ Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headse
 | Doorvoer van een definitiewijziging volgt alleen exemplaren die exact gelijk waren aan de oude definitie; afwijkende en vergrendelde exemplaren worden overgeslagen en gemeld. | Unit-getest | tests/assemblies.test.mjs |
 | Een herstelactie mag nooit rebouwen uit niets: zonder herkenbaar lid weigeren in plaats van de rest van de groep te verwijderen. | Unit-getest | tests/assemblies.test.mjs |
 | Na een actie die objecten opnieuw aanmaakt (nieuwe id's) de selectie expliciet herstellen, anders verdwijnt het paneel. | Browser-getest (e2e) | e2e/studio.spec.mjs |
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Zet in Blender `sensor_fit = VERTICAL` zodra het gezichtsveld uit een webviewer komt; anders wordt het horizontaal toegepast. | Op Blender 5.1.1 uitgevoerd en bekeken | docs/BLENDER.md, scripts/blender-orientation.mjs |
+| Controleer handedness met een asymmetrische scène en bounding boxes, niet met een symmetrische kamer. | Op Blender 5.1.1 uitgevoerd | scripts/blender-orientation.mjs, blender/diag_bbox.py |

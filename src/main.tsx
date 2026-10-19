@@ -400,6 +400,53 @@ function App() {
           catalogId: def.catalogId,
         };
       },
+      /**
+       * New definition derived from an existing one with its own name and size (e.g. a resizable library slab as a
+       * floor of exactly the right size). The original stays untouched; the variant is marked unique.
+       */
+      defineVariant: (
+        definitionId: string,
+        name: string,
+        size: { x: number; y: number; z: number },
+      ) => {
+        const base = pRef.current.definitions.find(
+          (d) => d.id === definitionId,
+        );
+        const ok = [size?.x, size?.y, size?.z].every(
+          (n) =>
+            typeof n === "number" && Number.isFinite(n) && n > 0 && n <= 100000,
+        );
+        if (!base || !ok || !String(name).trim())
+          return {
+            ok: false,
+            message: "Onbekende definitie, naam of ongeldige maat.",
+          };
+        const copy = clone(base);
+        copy.id = uid();
+        copy.name = String(name).trim().slice(0, 120);
+        copy.size = { x: size.x, y: size.y, z: size.z };
+        copy.unique = true;
+        operatorRef.current.change((q: Project) => ({
+          ...q,
+          definitions: [...q.definitions, copy],
+        }));
+        return { ok: true, definitionId: copy.id, sizeCm: copy.size };
+      },
+      /** Group objects (for example all floor tiles) under a name. */
+      group: (ids: string[], name: string) => {
+        const p = pRef.current,
+          next = group(p, ids);
+        if (next.groups.length === p.groups.length || !String(name).trim())
+          return {
+            ok: false,
+            message: "Groeperen kon niet (minstens 2 vrije objecten nodig).",
+          };
+        next.groups[next.groups.length - 1].name = String(name)
+          .trim()
+          .slice(0, 80);
+        operatorRef.current.change(next);
+        return { ok: true, groupId: next.groups[next.groups.length - 1].id };
+      },
       /** Apply a SceneProposal ({summary, questions, operations}) atomically; errors (e.g. outside the room) refuse it. */
       apply: (proposal: unknown) => {
         const before = new Set(pRef.current.objects.map((o) => o.id));

@@ -137,6 +137,77 @@ test("operator bridge: search the library, add models, apply validated operation
     )
     .toBeTruthy();
 
+  // A resizable library slab: a variant wider than the 600 cm room is refused, a fitting variant is applied.
+  const slab = await op(page, "ensureModel", ["Floor"]);
+  expect(slab.ok).toBe(true);
+  const huge = await op(page, "defineVariant", [
+    slab.definitionId,
+    "Vloer 700",
+    { x: 700, y: 3, z: 300 },
+  ]);
+  const tooBig = await op(page, "apply", [
+    {
+      summary: "x",
+      questions: [],
+      operations: [
+        {
+          type: "add",
+          definitionId: huge.definitionId,
+          name: "Te grote vloer",
+          position: { x: 0, y: 0, z: 0 },
+          rotation: 0,
+        },
+      ],
+    },
+  ]);
+  expect(tooBig.applied).toBe(false);
+  expect(tooBig.issues.some((i) => /buiten ruimte/.test(i.message))).toBe(true);
+  const variant = await op(page, "defineVariant", [
+    slab.definitionId,
+    "Vloer 391,3",
+    { x: 391.3, y: 3, z: 391.3 },
+  ]);
+  expect(variant.ok).toBe(true);
+  expect(
+    (
+      await op(page, "defineVariant", [
+        "bestaat-niet",
+        "x",
+        { x: 1, y: 1, z: 1 },
+      ])
+    ).ok,
+  ).toBe(false);
+  expect(
+    (
+      await op(page, "defineVariant", [
+        slab.definitionId,
+        "x",
+        { x: -1, y: 1, z: 1 },
+      ])
+    ).ok,
+  ).toBe(false);
+  const fit = await op(page, "apply", [
+    {
+      summary: "x",
+      questions: [],
+      operations: [
+        {
+          type: "add",
+          definitionId: variant.definitionId,
+          name: "Vloer",
+          position: { x: 0, y: 0, z: 0 },
+          rotation: 0,
+        },
+      ],
+    },
+  ]);
+  expect(fit.applied).toBe(true);
+  scene = await op(page, "scene");
+  expect(
+    scene.definitions.find((d) => d.id === slab.definitionId).sizeCm.x,
+  ).toBe(500);
+  expect(scene.objects.find((o) => o.name === "Vloer").sizeCm.x).toBe(391.3);
+
   // Fresh design with a given room; the library still answers.
   await op(page, "newDesign", [{ length: 900, depth: 500, height: 320 }]);
   scene = await op(page, "scene");

@@ -16,7 +16,9 @@ Afbeeldingen: een foto geldt als inspiratie, tenzij je zegt dat het een letterli
 | --- | --- |
 | `library(zoekterm, klasse, max)` | zoekt in de AluVision-bibliotheek op naam of beschrijving (artikelnummers) |
 | `ensureModel(verwijzing)` | haalt een model (bestandsnaam, Warehouse-id of unieke naam) van de server, controleert de checksum en maakt een definitie; bij meerdere treffers komt er een kandidatenlijst, niet een gok |
+| `defineVariant(definitieId, naam, maat)` | maakt van een bestaande definitie een eigen variant met een andere maat (bijvoorbeeld een vlakke bibliotheekplaat als vloer van precies de goede afmeting); het origineel blijft ongewijzigd |
 | `apply({summary, questions, operations})` | past een voorstel **atomair** toe: toevoegen, verplaatsen/draaien, verwijderen, uniek maken, formaat, materiaal, ruimteafmetingen |
+| `group(ids, naam)` | groepeert objecten onder een naam (bijvoorbeeld alle vloertegels) |
 | `scene()` | compacte weergave: ruimte, objecten (id, positie, draaiing, maat) en definities |
 | `newDesign(ruimte?)` | lege ruimte, optioneel met afmetingen |
 | `openServerProject(id)` | opent een op de server bewaard project |

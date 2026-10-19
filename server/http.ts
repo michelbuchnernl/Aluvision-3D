@@ -204,6 +204,48 @@ export function createStudioServer(options: Options) {
       )
         fail(403, "csrf_required", "Sessiecontrole mislukt. Verbind opnieuw.");
       const method = req.method ?? "GET";
+      // Preview images are loaded by <img>, which cannot send the tab header; the session cookie is enough here.
+      if (method === "GET" && url.pathname === "/api/library/gallery") {
+        const file = options.library?.galleryPath();
+        if (!file)
+          fail(
+            404,
+            "gallery_not_found",
+            "Geen galerij gevonden. Voer scripts/library/build_gallery.py uit.",
+          );
+        const bytes = readFileSync(file!);
+        res.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Length": bytes.length,
+          "Cache-Control": "private, no-cache",
+        });
+        res.end(bytes);
+        return;
+      }
+      if (
+        method === "GET" &&
+        url.pathname.startsWith("/api/library/previews/")
+      ) {
+        let name = "";
+        try {
+          name = decodeURIComponent(
+            url.pathname.slice("/api/library/previews/".length),
+          );
+        } catch {
+          fail(404, "preview_not_found", "Geen voorbeeld beschikbaar.");
+        }
+        const file = options.library?.previewPathFor(name);
+        if (!file)
+          fail(404, "preview_not_found", "Geen voorbeeld beschikbaar.");
+        const bytes = readFileSync(file!);
+        res.writeHead(200, {
+          "Content-Type": "image/png",
+          "Content-Length": bytes.length,
+          "Cache-Control": "private, max-age=3600",
+        });
+        res.end(bytes);
+        return;
+      }
       const leaseToken = String(req.headers["x-studio-lease"] ?? "");
       const clientId = String(req.headers["x-studio-client"] ?? "");
       if (!/^[a-zA-Z0-9-]{16,80}$/.test(clientId))
@@ -243,6 +285,7 @@ export function createStudioServer(options: Options) {
           options.library?.listing() ?? {
             available: false,
             hint: "Geen bibliotheek ingesteld op de server.",
+            classes: [],
             models: [],
           },
         );

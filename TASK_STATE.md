@@ -1,4 +1,4 @@
-# Bouwstatus — versie 1.4
+# Bouwstatus — versie 1.5
 
 18 oktober 2026. Michel gaf opdracht verder te bouwen en vroeg expliciet tussentijds naar Git te pushen. De thread en bron zijn intact. Tussentijds checkpoint `2f3592f` is naar de eigen branch gepusht; checkpoint 0250fee rondde de 0.2-groepscorrecties af. Versie 0.3 voegt ruimtelijke tools en GLB toe.
 
@@ -83,10 +83,16 @@
 
 ## Toegevoegd in versie 1.4 (AluVision-bibliotheek in plaats van synthetische onderdelen)
 
-- De synthetische bibliotheek en demo's zijn uit het product; de bibliotheek is nu de lokale AluVision-map (`library/aluvision`, 555 bruikbare GLB's via `manifest.json`), geserveerd door de lokale server, met checksumcontrole en verwijzingen in plaats van bytes in het project. Nieuw ontwerp = lege ruimte. Zie docs/LIBRARY.md.
+- De synthetische bibliotheek en demo's zijn uit het product; de bibliotheek is nu de lokale AluVision-map (`library/aluvision`, 555 bruikbare GLB's via `manifest.json`), geserveerd door de lokale server, met checksumcontrole en verwijzingen in plaats van bytes in het project. Nieuw ontwerp = lege ruimte. Zie docs/LIBRARY_APP.md.
 - `/library/` is git-ignored en bewaakt door een test; `scripts/library/` is weer trackable (de oude regel `library/` sloot ze per ongeluk uit). De manifestscript schreef ongeldige JSON (`-Infinity`) en is aangepast.
 - Pakketten verwijzen naar bibliotheekmodellen i.p.v. ze in te sluiten. Bekende grens: scène-GLB/Blender-render met veel zware bibliotheekmodellen.
 - De oude synthetische definities blijven alleen in de code voor oude projecten en testfixtures.
+
+## Toegevoegd in versie 1.5 (klassen en voorbeelden)
+
+- Alle bibliotheekmodellen zijn in 16 klassen (met subgroepen) ingedeeld op naam (`scripts/library/classify.py`); de app toont een klassenkeuzelijst, koppen en miniaturen; `blender/render_previews.py` rendert de voorbeelden; `scripts/library/build_gallery.py` maakt een doorzoekbare `gallery.html`. Zie docs/LIBRARY_APP.md (docs/LIBRARY.md is van de conversiestap).
+- Server: `classes` en `preview` in de lijst, `/api/library/previews/<bestand>.png` met alleen de sessiecookie.
+- De bibliotheek is intussen door een conversiestap aangevuld (nu 586 bruikbaar, 0 geweigerd); de tests zijn onafhankelijk van die aantallen gemaakt.
 
 ## Bewijs
 

@@ -141,3 +141,9 @@ Voer de concrete acceptatieprocedure in docs/MANUAL_QA.md uit voordat dit protot
 - Browser tegen de echte server (`e2e-render/library.spec.mjs`): het product start leeg, geen oude demo-onderdelen zichtbaar, zoeken en een echt model toevoegen, herladen haalt het opnieuw van de server, pakket bevat een verwijzing en geen model.
 - Steekproef: van 64 modellen komt de gemeten afmeting bij 62 binnen 2 % van het manifest; de twee afwijkingen zijn POP-deuren (2–3 %). Zes modellen met ingebedde textures kon Node niet parsen (`self is not defined`, een Node-beperking); in de browser laden ze.
 - Niet getest: render van scènes met meerdere bibliotheekmodellen, prestaties met tientallen zware modellen, het toevoegen van alle 555 modellen.
+
+## Versie 1.5 — klassen en voorbeelden (19 oktober 2026)
+
+- tests/library.test.mjs (nu 13): klassen en terugval naar 'Overig', lege klassen verdwijnen, previews alleen met sessiecookie, traversal en kapotte percent-codering geven 404, `classify.py` op representatieve namen, echte bibliotheek volledig geclassificeerd (≤ 5 % 'Overig').
+- Browser (e2e-render/library.spec.mjs): klassenkeuzelijst, subgroepkoppen, miniaturen laden als echte afbeeldingen.
+- Niet geverifieerd: of de klassen overeenkomen met hoe Aluvision zijn eigen assortiment indeelt; de miniaturen tonen een vaste weergave zonder echte oriëntatie.

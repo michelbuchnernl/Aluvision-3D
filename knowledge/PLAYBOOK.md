@@ -73,3 +73,9 @@ Deze regels zijn bewijs voor code en logica, niet voor Blender, een echte headse
 | Behandel een bibliotheekmanifest als onbetrouwbare data: valideer elk veld, serveer alleen items met status ready en een nog kloppende grootte, en controleer bij het laden de checksum die het project bewaart. | Unit- en e2e-getest | tests/library.test.mjs, e2e-render/library.spec.mjs |
 | Een `.gitignore`-regel voor een datamap moet aan de root verankerd zijn (`/library/`), anders sluit hij ook scripts met dezelfde mapnaam uit; bewaak dat met een test. | Unit-getest | tests/library.test.mjs |
 | Genereer JSON nooit met Python's standaard `allow_nan`: `Infinity` is geen geldige JSON; gebruik `allow_nan=False` en maak niet-eindige waarden `null`. | Uitgevoerd op het echte manifest | tests/library.test.mjs, scripts/library/build_manifest.py |
+
+| Regel | Status | Bewijs |
+| --- | --- | --- |
+| Ruim in een Blender-batch per model alleen de zojuist aangemaakte datablokken op; een recursieve orphan-purge loopt vast op zware modellen. | Op de echte bibliotheek uitgevoerd | blender/render_previews.py |
+| Afbeeldingen die via `<img>` worden geladen kunnen geen eigen headers meesturen; geef ze een route die op alleen de sessiecookie leunt en valideer de bestandsnaam tegen de lijst. | Unit-getest | tests/library.test.mjs |
+| Indelingsregels op naam: vaste volgorde (eerste treffer wint), een rapport van wat in 'Overig' valt en een test op representatieve namen. | Unit-getest | tests/library.test.mjs, scripts/library/classify.py |

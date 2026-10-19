@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { Library } from "../server/library.ts";
 import { ProjectStore } from "../server/store.ts";
@@ -294,3 +294,192 @@ test("the library's binaries can never be committed by accident: the folder is g
     "scripts stay trackable",
   );
 });
+
+// ---- classes and previews ----
+function classFixture() {
+  const f = fixture();
+  mkdirSync(join(f.dir, "previews"));
+  const png = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from("fake-png"),
+  ]);
+  writeFileSync(join(f.dir, "previews", "Kist__aaaaaaaa.png"), png);
+  writeFileSync(
+    join(f.dir, "classes.json"),
+    JSON.stringify({
+      classes: [
+        { id: "stands", label: "Standconcepten", description: "x" },
+        { id: "connections", label: "Verbindingen", description: "y" },
+        { id: "empty", label: "Leeg", description: "z" },
+        { id: "other", label: "Overig", description: "w" },
+        { id: "BAD ID", label: "Kapot", description: "" },
+      ],
+      models: {
+        "Kist__aaaaaaaa.glb": { class: "connections", group: "Joining sets" },
+        "Anders__cccccccc.glb": { class: "nonexistent" },
+        "../evil.glb": { class: "stands" },
+      },
+    }),
+  );
+  return { ...f, png };
+}
+
+test("classes: files are grouped, unknown classes fall back to 'other', empty classes disappear, bad ids are ignored", () => {
+  const f = classFixture();
+  const l = new Library(f.dir).listing();
+  const kist = l.models.find((m) => m.file === "Kist__aaaaaaaa.glb");
+  assert.deepEqual([kist.class, kist.group], ["connections", "Joining sets"]);
+  assert.equal(
+    l.models.find((m) => m.file === "Anders__cccccccc.glb").class,
+    "other",
+  );
+  assert.equal(
+    l.models.find((m) => m.file === "Zwaar__bbbbbbbb.glb").class,
+    "other",
+    "unlisted files also fall back",
+  );
+  assert.deepEqual(
+    l.classes.map((c) => [c.id, c.count]),
+    [
+      ["connections", 1],
+      ["other", 1],
+    ],
+    "only classes with ready models, counted",
+  );
+  assert.ok(!l.classes.some((c) => c.id === "BAD ID" || c.id === "empty"));
+  f.done();
+});
+
+test("without classes.json everything still lists, ungrouped", () => {
+  const f = fixture();
+  const l = new Library(f.dir).listing();
+  assert.deepEqual(l.classes, []);
+  assert.ok(l.models.every((m) => m.class === ""));
+  f.done();
+});
+
+test("previews: flagged by existence, served without the tab header, traversal and unlisted names give 404", async () => {
+  const f = classFixture();
+  const lib = new Library(f.dir);
+  const byFile = Object.fromEntries(
+    lib.listing().models.map((m) => [m.file, m.preview]),
+  );
+  assert.equal(byFile["Kist__aaaaaaaa.glb"], true);
+  assert.equal(byFile["Zwaar__bbbbbbbb.glb"], false);
+  assert.ok(lib.previewPathFor("Kist__aaaaaaaa.png"));
+  assert.ok(lib.previewPathFor("Kist__aaaaaaaa.glb"));
+  assert.equal(lib.previewPathFor("../manifest.png"), undefined);
+  assert.equal(
+    lib.previewPathFor("Zwaar__bbbbbbbb.png"),
+    undefined,
+    "listed but no image",
+  );
+  const store = new ProjectStore(),
+    app = createStudioServer({ store, library: lib });
+  await new Promise((r) => app.server.listen(0, "127.0.0.1", r));
+  const base = "http://127.0.0.1:" + app.server.address().port;
+  const session = await fetch(base + "/api/session");
+  const cookie = session.headers.get("set-cookie").split(";")[0];
+  await session.text();
+  const ok = await fetch(base + "/api/library/previews/Kist__aaaaaaaa.png", {
+    headers: { cookie },
+  });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers.get("content-type"), "image/png");
+  assert.deepEqual(Buffer.from(await ok.arrayBuffer()), f.png);
+  for (const bad of [
+    "Zwaar__bbbbbbbb.png",
+    "..%2Fmanifest.png",
+    "%E0%A4%A",
+    "nope.png",
+  ]) {
+    const r = await fetch(base + "/api/library/previews/" + bad, {
+      headers: { cookie },
+    });
+    assert.equal(r.status, 404, bad);
+    await r.text();
+  }
+  const noSession = await fetch(
+    base + "/api/library/previews/Kist__aaaaaaaa.png",
+  );
+  assert.equal(noSession.status, 401, "no session cookie, no image");
+  await noSession.text();
+  await new Promise((r) => app.server.close(r));
+  store.close();
+  f.done();
+});
+
+test("classify.py: representative names land in the intended classes and nothing is lost", () => {
+  const dir = mkdtempSync(join(tmpdir(), "classify-"));
+  mkdirSync(join(dir, "library", "aluvision"), { recursive: true });
+  const names = {
+    "6x3P 001": ["stands", "6×3 m"],
+    "Essential Collection 3": ["stands", "Collecties"],
+    "connection 4P 90° LS30": ["connections", "Verbindingsknopen"],
+    "Fab-55 frame clamp D30 G": ["connections", "Framekleminen"],
+    "quick tightener D6*100 A": ["fasteners", "Quick tighteners"],
+    "QuiXy wall unit 992*2418 A": ["quixy", null],
+    "Hi-LED PRO 496x496 P1.9/P1.5 OR": ["led", null],
+    "Omni -55 POP door": ["doors", null],
+    "Basic-55 base V7 L": ["bases", null],
+    "Step ON profile /m A": ["floors", "Step-podia"],
+    "Flexbox railing module": ["flex", "Flexbox"],
+    "Omni-55 A1/A3": ["frames", "Frames"],
+    "folderholder D15 L G": ["interior", null],
+    "Benta!": ["furniture", "Balies & bars"],
+    "quick tightener door-to-door I": ["fasteners", "Quick tighteners"],
+    "cover Omni-55 90° wall reinforcement": ["covers", null],
+    "base clamp D30 quickfix v2": ["connections", "Framekleminen"],
+    "Omni-55 A3 wall reinforcement 180° L": ["rigging", null],
+    "Zonder Bekende Woorden": ["other", null],
+  };
+  const models = Object.keys(names).map((name, i) => ({
+    name,
+    status: "ready",
+    file: `glb/f${i}__abcdef0${i % 10}.glb`,
+  }));
+  writeFileSync(
+    join(dir, "library", "aluvision", "manifest.json"),
+    JSON.stringify({ models }),
+  );
+  const run = spawnSync(
+    "python3",
+    ["-B", "-I", resolve("scripts/library/classify.py")],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.equal(run.status, 0, run.stderr);
+  const out = JSON.parse(
+    readFileSync(join(dir, "library", "aluvision", "classes.json"), "utf8"),
+  );
+  models.forEach((m) => {
+    const got = out.models[m.file.replace("glb/", "")];
+    assert.deepEqual([got.class, got.group], names[m.name], m.name);
+  });
+  assert.equal(Object.keys(out.models).length, models.length);
+  assert.ok(out.classes.every((c) => c.id && c.label));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test(
+  "real library: every ready model has a class and few fall into 'other'",
+  {
+    skip:
+      hasReal && existsSync(join(real, "classes.json"))
+        ? false
+        : "classes.json niet aanwezig",
+  },
+  () => {
+    const l = new Library(real).listing();
+    const ready = l.models.filter((m) => m.status === "ready");
+    assert.ok(
+      ready.every((m) => m.class),
+      "unclassified model present",
+    );
+    const other = ready.filter((m) => m.class === "other").length;
+    assert.ok(
+      other <= Math.max(5, ready.length * 0.05),
+      `${other} models in 'other'`,
+    );
+    assert.ok(l.classes.length >= 8, "expected a real taxonomy");
+  },
+);

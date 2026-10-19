@@ -81,3 +81,52 @@ test("AluVision library: browse, add a model from the server, it survives a relo
   ]);
   expect(errors).toEqual([]);
 });
+
+test("AluVision library: class chips group the models, sub-groups are headed, previews load as images", async ({
+  page,
+}) => {
+  test.skip(
+    !existsSync("library/aluvision/classes.json"),
+    "classes.json niet aanwezig",
+  );
+  test.skip(
+    !existsSync("library/aluvision/previews"),
+    "previews niet aanwezig",
+  );
+  await page.goto("/?e2e=1");
+  await page.waitForFunction(() => window.__studio);
+  const klass = page.getByLabel("Klasse");
+  await expect(klass).toBeVisible();
+  expect(await klass.locator("option").count()).toBeGreaterThanOrEqual(10);
+  // Without a class selected, models are headed by their class.
+  await expect(page.locator(".library-group").first()).toBeVisible();
+
+  await klass.selectOption("connections");
+  const headings = await page.locator(".library-group").allInnerTexts();
+  expect(headings.length).toBeGreaterThan(0);
+  expect(
+    headings.every((h) =>
+      /verbindingsknopen|joining sets|framekleminen|hoekverbindingen/i.test(h),
+    ),
+  ).toBe(true);
+  for (const name of ["connection", "joining set", "frame clamp"]) {
+    const names = await page.locator(".catalog-card strong").allInnerTexts();
+    expect(names.some((n) => n.toLowerCase().includes(name))).toBe(true);
+  }
+  // Thumbnails are real images served by the API.
+  const img = page
+    .locator('.catalog-card img[src*="/api/library/previews/"]')
+    .first();
+  await expect(img).toBeVisible();
+  await expect
+    .poll(() => img.evaluate((el) => el.complete && el.naturalWidth > 0))
+    .toBe(true);
+
+  // Selecting another class replaces the list; choosing "Alle klassen" clears the filter.
+  await klass.selectOption("quixy");
+  const quixy = await page.locator(".catalog-card strong").allInnerTexts();
+  expect(quixy.length).toBeGreaterThan(10);
+  expect(quixy.every((n) => /quixy/i.test(n))).toBe(true);
+  await klass.selectOption("");
+  await expect(page.locator(".library-group").first()).toBeVisible();
+});
